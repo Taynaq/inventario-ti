@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#0F6B7A" />
+    <meta
+      name="description"
+      content="Controle dos equipamentos de TI da empresa: cadastro, responsável, patrimônio, status e garantia."
+    />
+    <title>Inventário de TI</title>
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="icon" href="icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="icon-192.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap"
+    />
+  </head>
+  <body>
+    <!-- Tela de login (só aparece no modo compartilhado) -->
+    <div class="auth" id="auth" hidden></div>
+
+    <div class="app" id="app" hidden>
+      <header class="top">
+        <div class="titlebar">
+          <h1>Inventário de TI</h1>
+          <p class="summary" id="summary">Carregando…</p>
+        </div>
+        <div class="tools" id="tools" hidden>
+          <div class="search">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linecap="round"
+              aria-hidden="true"
+            >
+              <circle cx="11" cy="11" r="6.5" />
+              <path d="M16 16l4.5 4.5" />
+            </svg>
+            <input
+              id="q"
+              type="search"
+              placeholder="Buscar nome, série, responsável"
+              aria-label="Buscar equipamento"
+              autocomplete="off"
+            />
+          </div>
+          <select id="catFilter" aria-label="Filtrar por categoria"></select>
+        </div>
+        <div class="chips" id="chips" role="group" aria-label="Filtrar por status" hidden></div>
+      </header>
+
+      <main>
+        <div class="note" id="note" hidden>
+          <span>Você está vendo equipamentos de exemplo.</span>
+          <button type="button" class="link" data-act="rm-examples">Remover exemplos</button>
+        </div>
+        <ul class="list" id="list"></ul>
+        <div class="empty" id="empty" hidden></div>
+        <p class="foot">
+          <span id="foot"></span><button type="button" class="link" id="signOut" hidden>Sair</button>
+        </p>
+      </main>
+
+      <button class="fab" id="addBtn" type="button">
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          aria-hidden="true"
+        >
+          <path d="M12 5v14M5 12h14" />
+        </svg>
+        Novo equipamento
+      </button>
+    </div>
+
+    <div class="scrim" id="scrim" hidden></div>
+
+    <form
+      class="sheet"
+      id="sheetForm"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="formTitle"
+      novalidate
+      autocomplete="off"
+      hidden
+    >
+      <div class="sheet-head">
+        <div class="dh"><h2 id="formTitle">Novo equipamento</h2></div>
+        <button type="button" class="icon-btn" data-close aria-label="Fechar">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            aria-hidden="true"
+          >
+            <path d="M6 6l12 12M18 6L6 18" />
+          </svg>
+        </button>
+      </div>
+      <div class="sheet-body">
+        <div class="field">
+          <label for="f-name">Nome <span class="req">(obrigatório)</span></label>
+          <input id="f-name" type="text" placeholder="Ex.: Notebook Dell Latitude 5420" />
+        </div>
+        <div class="two">
+          <div class="field">
+            <label for="f-cat">Categoria</label
+            ><select id="f-cat"></select>
+          </div>
+          <div class="field">
+            <label for="f-status">Status</label
+            ><select id="f-status"></select>
+          </div>
+        </div>
+        <div class="field">
+          <label for="f-owner">Responsável</label>
+          <input id="f-owner" type="text" list="dl-owners" placeholder="Quem usa este equipamento" />
+          <datalist id="dl-owners"></datalist>
+        </div>
+        <details class="more" id="more">
+          <summary>Mais detalhes</summary>
+          <div class="inner">
+            <div class="field">
+              <label for="f-brand">Marca e modelo</label
+              ><input id="f-brand" type="text" placeholder="Ex.: Dell Latitude 5420" />
+            </div>
+            <div class="two">
+              <div class="field">
+                <label for="f-serial">Número de série</label
+                ><input id="f-serial" type="text" class="mono" placeholder="Ex.: 7K2M9Q3" />
+              </div>
+              <div class="field">
+                <label for="f-tag">Patrimônio</label
+                ><input id="f-tag" type="text" class="mono" placeholder="Ex.: PAT-0012" />
+              </div>
+            </div>
+            <div class="field">
+              <label for="f-loc">Local</label>
+              <input id="f-loc" type="text" list="dl-locs" placeholder="Ex.: Financeiro, Almoxarifado" />
+              <datalist id="dl-locs"></datalist>
+            </div>
+            <div class="two">
+              <div class="field">
+                <label for="f-buy">Data da compra</label><input id="f-buy" type="date" />
+              </div>
+              <div class="field">
+                <label for="f-warranty">Garantia até</label><input id="f-warranty" type="date" />
+              </div>
+            </div>
+            <div class="field">
+              <label for="f-value">Valor pago (R$)</label
+              ><input id="f-value" type="text" inputmode="decimal" placeholder="Ex.: 3.500,00" />
+            </div>
+            <div class="field">
+              <label for="f-notes">Observações</label
+              ><textarea
+                id="f-notes"
+                placeholder="Acessórios, defeitos conhecidos, onde está guardado."
+              ></textarea>
+            </div>
+          </div>
+        </details>
+        <p class="err" id="formErr" role="alert"></p>
+      </div>
+      <div class="sheet-foot">
+        <button type="button" class="btn" data-close>Cancelar</button>
+        <button type="submit" class="btn primary" id="saveBtn">Salvar</button>
+      </div>
+    </form>
+
+    <section
+      class="sheet"
+      id="sheetDetail"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="detailTitle"
+      hidden
+    >
+      <div class="sheet-head">
+        <div class="dh">
+          <h2 id="detailTitle"></h2>
+          <p id="detailSub" hidden></p>
+        </div>
+        <button type="button" class="icon-btn" id="detailClose" data-close aria-label="Fechar">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            aria-hidden="true"
+          >
+            <path d="M6 6l12 12M18 6L6 18" />
+          </svg>
+        </button>
+      </div>
+      <div class="sheet-body" id="detailBody"></div>
+      <div class="sheet-foot">
+        <button type="button" class="btn danger" id="delBtn">Excluir</button>
+        <button type="button" class="btn primary" id="editBtn">Editar</button>
+      </div>
+    </section>
+
+    <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

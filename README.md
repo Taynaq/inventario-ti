@@ -1,0 +1,99 @@
+# Inventário de TI
+
+Aplicativo web para celular que controla os equipamentos de TI da empresa: notebooks, celulares, monitores, impressoras, rede e o que mais você tiver. Cada equipamento tem responsável, local, número de série, patrimônio, status, data de compra, garantia e valor. O app avisa quando uma garantia está vencida ou perto de vencer.
+
+Gratuito e de código aberto (licença MIT). Funciona no navegador do celular e pode ser instalado na tela inicial.
+
+## Dois modos de uso
+
+| Modo               | Para quem                         | Dados ficam                    | Login               |
+| ------------------ | --------------------------------- | ------------------------------ | ------------------- |
+| **Local** (padrão) | Testar ou uso individual          | Só no navegador de cada pessoa | Não                 |
+| **Compartilhado**  | A equipe toda no mesmo inventário | No Supabase (plano gratuito)   | Sim, e-mail e senha |
+
+O modo é escolhido pelas variáveis de ambiente. Sem elas, o app roda em modo local.
+
+## Rodar no VS Code
+
+Você precisa do [Node.js](https://nodejs.org) 20 ou mais novo e do [Git](https://git-scm.com).
+
+```bash
+git clone https://github.com/SEU-USUARIO/inventario-ti.git
+cd inventario-ti
+code .          # abre no VS Code; aceite instalar as extensões recomendadas
+npm install
+npm run dev     # abre em http://localhost:5173
+```
+
+Para ver no celular durante o desenvolvimento, rode `npm run dev -- --host` e abra o endereço de rede que o terminal mostrar (celular e computador na mesma rede Wi-Fi).
+
+### Comandos
+
+| Comando             | O que faz                                          |
+| ------------------- | -------------------------------------------------- |
+| `npm run dev`       | Servidor de desenvolvimento com recarga automática |
+| `npm test`          | Roda os testes                                     |
+| `npm run typecheck` | Confere os tipos do TypeScript                     |
+| `npm run format`    | Formata o código com Prettier                      |
+| `npm run build`     | Gera a versão final na pasta `dist/`               |
+| `npm run preview`   | Abre a versão final localmente                     |
+
+## Ligar o modo compartilhado (Supabase)
+
+1. Crie uma conta e um projeto gratuito em [supabase.com](https://supabase.com).
+2. No projeto, abra **SQL Editor**, cole o conteúdo de [`supabase/schema.sql`](supabase/schema.sql) e clique em **Run**. Isso cria as tabelas e as regras de acesso.
+3. Libere seu e-mail: no **SQL Editor** rode `insert into public.allowed_emails (email) values ('voce@suaempresa.com.br');` (em minúsculas). Para liberar outras pessoas, adicione mais e-mails na tabela `allowed_emails` pelo **Table Editor**.
+4. Em **Authentication > Providers > Email**, deixe **Confirm email** ligado. Isso garante que só o dono de um e-mail consegue entrar com ele.
+5. Em **Project Settings > API**, copie a **Project URL** e a chave **anon** (ou **publishable**).
+6. Copie `.env.example` para `.env` e preencha as duas variáveis. Rode `npm run dev` de novo.
+7. Quando publicar o app (próxima seção), vá em **Authentication > URL Configuration** e coloque o endereço publicado em **Site URL**. Sem isso os links de confirmação de e-mail e de recuperação de senha apontam para o lugar errado.
+
+**Segurança:** a chave `anon` fica visível no código do app, e isso é esperado. Quem protege os dados são as regras do banco (RLS): só entra quem está logado **e** está na lista `allowed_emails`. Nunca use a chave `service_role` no app.
+
+## Publicar para os colaboradores (GitHub Pages, gratuito)
+
+O repositório já traz o workflow [`deploy.yml`](.github/workflows/deploy.yml), que roda os testes, gera o app e publica a cada envio para a branch `main`.
+
+1. No GitHub, abra **Settings > Pages** e em **Source** escolha **GitHub Actions**.
+2. Para o modo compartilhado, abra **Settings > Secrets and variables > Actions > Variables** e crie `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY` com os mesmos valores do `.env`. Sem elas, a versão publicada roda em modo local.
+3. Envie qualquer alteração para a `main` (ou rode o workflow manualmente na aba **Actions**).
+4. O endereço fica em `https://SEU-USUARIO.github.io/inventario-ti/`. Mande o link para a equipe.
+
+**Repositório público ou privado:** o GitHub Pages grátis exige repositório **público**. Isso é seguro aqui, porque o código não contém segredos e os dados ficam protegidos no Supabase. Se preferir manter o repositório privado, publique em [Cloudflare Pages](https://pages.cloudflare.com) ou [Netlify](https://www.netlify.com) (ambos têm plano gratuito): comando de build `npm run build`, pasta de saída `dist`, e as duas variáveis acima.
+
+**Instalar no celular:** abra o endereço no navegador e use **Adicionar à tela inicial** (Android: menu do Chrome; iPhone: botão Compartilhar do Safari).
+
+## Como o código está organizado
+
+```
+src/
+  types.ts            tipos do equipamento e dos filtros
+  domain/             regras do negócio, sem tela e sem banco (testadas)
+    catalog.ts          categorias e status
+    warranty.ts         aviso de garantia
+    filter.ts           busca, filtros e resumo
+    format.ts           datas, dinheiro e busca sem acento
+    equipment.ts        criar, validar e atualizar equipamentos
+    examples.ts         equipamentos de exemplo
+  data/               onde os dados ficam
+    store.ts            contrato comum (interface Store)
+    localStore.ts       implementação no navegador
+    cloudStore.ts       implementação no Supabase, com tempo real
+    supabaseClient.ts   cria o cliente a partir do .env
+  ui/                 telas
+    inventoryView.ts    lista, filtros, cadastro, detalhe
+    auth.ts             login, cadastro e recuperação de senha
+    dom.ts, icons.ts    utilitários
+  main.ts             escolhe o modo e inicia o app
+supabase/schema.sql   tabelas, regras de acesso e tempo real
+```
+
+A tela só conversa com a interface `Store`. Para trocar o Supabase por outro banco, basta escrever uma nova implementação dessa interface.
+
+## Contribuir
+
+Veja [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## Licença
+
+[MIT](LICENSE).
