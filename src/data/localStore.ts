@@ -60,6 +60,16 @@ export class LocalStore implements Store {
     this.write(items);
   }
 
+  async saveMany(incoming: readonly Equipment[]): Promise<void> {
+    const items = this.read();
+    for (const item of incoming) {
+      const i = items.findIndex((x) => x.id === item.id);
+      if (i >= 0) items[i] = item;
+      else items.push(item);
+    }
+    this.write(items);
+  }
+
   async patch(id: string, fields: EquipmentPatch): Promise<void> {
     const items = this.read();
     const i = items.findIndex((x) => x.id === id);

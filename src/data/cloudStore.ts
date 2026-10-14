@@ -149,6 +149,17 @@ export class CloudStore implements Store {
     this.emit();
   }
 
+  async saveMany(items: readonly Equipment[]): Promise<void> {
+    // Em blocos, para não estourar o tamanho de uma requisição.
+    for (let i = 0; i < items.length; i += 200) {
+      const chunk = items.slice(i, i + 200);
+      const { error } = await this.db.from(TABLE).upsert(chunk.map((it) => toRow(it)));
+      if (error) throw toStoreError(error);
+      for (const it of chunk) this.cache.set(it.id, it);
+    }
+    this.emit();
+  }
+
   async patch(id: string, fields: EquipmentPatch): Promise<void> {
     const { error } = await this.db.from(TABLE).update(toRow(fields)).eq('id', id);
     if (error) throw toStoreError(error);

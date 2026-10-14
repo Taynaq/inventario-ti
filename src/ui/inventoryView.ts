@@ -9,12 +9,13 @@ import {
   isStatusId,
 } from '../domain/catalog';
 import { applyDraft, createEquipment } from '../domain/equipment';
-import { exampleEquipment } from '../domain/examples';
 import { EMPTY_FILTERS, filterEquipment, summarize } from '../domain/filter';
 import { formatDate, formatMoney, formatMoneyShort, parseMoney } from '../domain/format';
 import { warrantyAlert } from '../domain/warranty';
 import { $, esc, toast } from './dom';
+import { DashboardView } from './dashboardView';
 import { categoryIcon } from './icons';
+import { ImportView } from './importView';
 
 export interface ViewOptions {
   /** E-mail de quem está usando (modo compartilhado). */
@@ -26,6 +27,8 @@ export interface ViewOptions {
 const option = (value: string, label: string): string =>
   `<option value="${esc(value)}">${esc(label)}</option>`;
 
+type Tab = 'lista' | 'painel' | 'importar';
+
 export class InventoryView {
   private items: Equipment[] = [];
   private ready = false;
@@ -36,6 +39,9 @@ export class InventoryView {
   private armedDelete: string | null = null;
   private armTimer: ReturnType<typeof setTimeout> | undefined;
   private lastFocus: Element | null = null;
+  private tab: Tab = 'lista';
+  private dash!: DashboardView;
+  private importer!: ImportView;
 
   constructor(
     private readonly store: Store,
@@ -53,6 +59,17 @@ export class InventoryView {
       out.hidden = false;
       out.addEventListener('click', this.opts.onSignOut);
     }
+    this.dash = new DashboardView($('#viewDash'), {
+      showList: (f) => this.showList(f),
+      add: () => this.openForm(null),
+      importFile: () => this.setTab('importar'),
+    });
+    this.importer = new ImportView(
+      $('#viewImport'),
+      this.store,
+      () => this.items,
+      () => this.setTab('lista'),
+    );
     this.bind();
     this.render();
     this.store.subscribe(
@@ -101,11 +118,15 @@ export class InventoryView {
       if (target.closest('[data-close]')) return this.closeSheets();
       const act = target.closest<HTMLElement>('[data-act]')?.dataset.act;
       if (act === 'add') this.openForm(null);
-      else if (act === 'examples') void this.loadExamples();
+      else if (act === 'import') this.setTab('importar');
       else if (act === 'rm-examples') void this.removeExamples();
     });
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') this.closeSheets();
+    });
+    $('#tabs').addEventListener('click', (e) => {
+      const tab = (e.target as Element).closest<HTMLElement>('[data-tab]')?.dataset.tab;
+      if (tab === 'lista' || tab === 'painel' || tab === 'importar') this.setTab(tab);
     });
     $('#addBtn').addEventListener('click', () => this.openForm(null));
     $('#scrim').addEventListener('click', () => this.closeSheets());
@@ -124,6 +145,28 @@ export class InventoryView {
     });
   }
 
+  private setTab(tab: Tab): void {
+    this.tab = tab;
+    document.querySelectorAll<HTMLElement>('[data-tab]').forEach((b) => {
+      if (b.dataset.tab === tab) b.setAttribute('aria-current', 'page');
+      else b.removeAttribute('aria-current');
+    });
+    $('#viewList').hidden = tab !== 'lista';
+    $('#viewDash').hidden = tab !== 'painel';
+    $('#viewImport').hidden = tab !== 'importar';
+    $('#addBtn').hidden = tab === 'importar';
+    this.render();
+    window.scrollTo(0, 0);
+  }
+
+  /** Abre a lista já filtrada (usado pelos toques no painel). */
+  private showList(partial: Partial<Filters>): void {
+    this.filters = { ...EMPTY_FILTERS, ...partial };
+    $<HTMLInputElement>('#q').value = this.filters.query;
+    $<HTMLSelectElement>('#catFilter').value = this.filters.category;
+    this.setTab('lista');
+  }
+
   private clearFilters(): void {
     this.filters = { ...EMPTY_FILTERS };
     $<HTMLInputElement>('#q').value = '';
@@ -137,6 +180,8 @@ export class InventoryView {
     this.renderHead();
     this.renderList();
     this.renderFoot();
+    this.dash.render(this.items, this.ready);
+    this.importer.update();
     if (!$('#sheetDetail').hidden) this.renderDetail();
   }
 
@@ -151,7 +196,7 @@ export class InventoryView {
         : `${s.total} ${s.total === 1 ? 'equipamento' : 'equipamentos'}` +
           (s.assetValue > 0 ? ` · ${formatMoneyShort(s.assetValue)} em ativos` : '');
 
-    const show = this.ready && s.total > 0;
+    const show = this.ready && s.total > 0 && this.tab === 'lista';
     $('#tools').hidden = !show;
     const chips = $('#chips');
     chips.hidden = !show;
@@ -212,7 +257,7 @@ export class InventoryView {
         '<h2>Cadastre o primeiro equipamento</h2>' +
         '<p>Notebooks, celulares, monitores, impressoras e o que mais você controla ficam aqui, com responsável, série, patrimônio e garantia. Só o nome é obrigatório.</p>' +
         '<div class="actions"><button type="button" class="btn primary" data-act="add">Adicionar equipamento</button>' +
-        '<button type="button" class="btn" data-act="examples">Ver com exemplos</button></div>';
+        '<button type="button" class="btn" data-act="import">Importar de PDF ou CSV</button></div>';
       return;
     }
     empty.hidden = true;
@@ -441,15 +486,6 @@ export class InventoryView {
       this.armedDelete = null;
       this.closeSheets();
       toast('Equipamento excluído');
-    } catch (e) {
-      toast(describeError(e));
-    }
-  }
-
-  private async loadExamples(): Promise<void> {
-    try {
-      for (const item of exampleEquipment()) await this.store.save(item);
-      toast('Exemplos carregados');
     } catch (e) {
       toast(describeError(e));
     }

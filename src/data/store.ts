@@ -12,6 +12,8 @@ export interface Store {
   /** Entrega a lista atual e depois a cada mudança. Devolve a função que cancela. */
   subscribe(onChange: (items: Equipment[]) => void, onError: (e: StoreError) => void): () => void;
   save(item: Equipment): Promise<void>;
+  /** Salva vários de uma vez (usado na importação). */
+  saveMany(items: readonly Equipment[]): Promise<void>;
   patch(id: string, fields: EquipmentPatch): Promise<void>;
   remove(id: string): Promise<void>;
   removeMany(ids: readonly string[]): Promise<void>;

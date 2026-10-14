@@ -29,6 +29,11 @@
           <h1>Inventário de TI</h1>
           <p class="summary" id="summary">Carregando…</p>
         </div>
+        <nav class="tabs" id="tabs" aria-label="Seções do app">
+          <button type="button" class="tab" data-tab="lista" aria-current="page">Lista</button>
+          <button type="button" class="tab" data-tab="painel">Painel</button>
+          <button type="button" class="tab" data-tab="importar">Importar</button>
+        </nav>
         <div class="tools" id="tools" hidden>
           <div class="search">
             <svg
@@ -56,12 +61,16 @@
       </header>
 
       <main>
-        <div class="note" id="note" hidden>
-          <span>Você está vendo equipamentos de exemplo.</span>
-          <button type="button" class="link" data-act="rm-examples">Remover exemplos</button>
+        <div id="viewList">
+          <div class="note" id="note" hidden>
+            <span>Há equipamentos de exemplo salvos neste app.</span>
+            <button type="button" class="link" data-act="rm-examples">Remover exemplos</button>
+          </div>
+          <ul class="list" id="list"></ul>
+          <div class="empty" id="empty" hidden></div>
         </div>
-        <ul class="list" id="list"></ul>
-        <div class="empty" id="empty" hidden></div>
+        <div id="viewDash" hidden></div>
+        <div id="viewImport" hidden></div>
         <p class="foot">
           <span id="foot"></span><button type="button" class="link" id="signOut" hidden>Sair</button>
         </p>

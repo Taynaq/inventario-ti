@@ -13,12 +13,18 @@ Gratuito e de código aberto (licença MIT). Funciona no navegador do celular e 
 
 O modo é escolhido pelas variáveis de ambiente. Sem elas, o app roda em modo local.
 
+## Painel e importação
+
+- **Painel:** total, valor em ativos, situação, garantias vencendo, e quebras por categoria, local, responsável e idade. Tocar numa barra abre a lista filtrada.
+- **Importar:** escolha um **PDF** com a tabela de equipamentos (ou um **CSV**). O app reconhece as colunas pelos títulos, mostra uma prévia, você ajusta se precisar, e importa. Equipamentos com o mesmo patrimônio ou série são ignorados, e dá para **desfazer** a última importação.
+- Limites: o PDF precisa ter texto selecionável. PDF de foto/digitalização não funciona; nesse caso exporte do Excel como CSV. O app não traz equipamentos de exemplo.
+
 ## Rodar no VS Code
 
 Você precisa do [Node.js](https://nodejs.org) 20 ou mais novo e do [Git](https://git-scm.com).
 
 ```bash
-git clone https://github.com/SEU-USUARIO/inventario-ti.git
+git clone https://github.com/Taynaq/inventario-ti.git
 cd inventario-ti
 code .          # abre no VS Code; aceite instalar as extensões recomendadas
 npm install
@@ -57,7 +63,7 @@ O repositório já traz o workflow [`deploy.yml`](.github/workflows/deploy.yml),
 1. No GitHub, abra **Settings > Pages** e em **Source** escolha **GitHub Actions**.
 2. Para o modo compartilhado, abra **Settings > Secrets and variables > Actions > Variables** e crie `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY` com os mesmos valores do `.env`. Sem elas, a versão publicada roda em modo local.
 3. Envie qualquer alteração para a `main` (ou rode o workflow manualmente na aba **Actions**).
-4. O endereço fica em `https://SEU-USUARIO.github.io/inventario-ti/`. Mande o link para a equipe.
+4. O endereço fica em `https://Taynaq.github.io/inventario-ti/`. Mande o link para a equipe.
 
 **Repositório público ou privado:** o GitHub Pages grátis exige repositório **público**. Isso é seguro aqui, porque o código não contém segredos e os dados ficam protegidos no Supabase. Se preferir manter o repositório privado, publique em [Cloudflare Pages](https://pages.cloudflare.com) ou [Netlify](https://www.netlify.com) (ambos têm plano gratuito): comando de build `npm run build`, pasta de saída `dist`, e as duas variáveis acima.
 
@@ -74,14 +80,18 @@ src/
     filter.ts           busca, filtros e resumo
     format.ts           datas, dinheiro e busca sem acento
     equipment.ts        criar, validar e atualizar equipamentos
-    examples.ts         equipamentos de exemplo
+    dashboard.ts        números do Painel
+    importing.ts        leitura de tabelas de PDF/CSV e conversão em equipamentos
   data/               onde os dados ficam
     store.ts            contrato comum (interface Store)
     localStore.ts       implementação no navegador
     cloudStore.ts       implementação no Supabase, com tempo real
+    pdfText.ts          extrai o texto do PDF (carregado só ao importar)
     supabaseClient.ts   cria o cliente a partir do .env
   ui/                 telas
-    inventoryView.ts    lista, filtros, cadastro, detalhe
+    inventoryView.ts    abas, lista, filtros, cadastro, detalhe
+    dashboardView.ts    aba Painel
+    importView.ts       aba Importar
     auth.ts             login, cadastro e recuperação de senha
     dom.ts, icons.ts    utilitários
   main.ts             escolhe o modo e inicia o app
