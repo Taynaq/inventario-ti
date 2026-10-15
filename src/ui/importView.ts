@@ -32,7 +32,7 @@ export class ImportView {
   private skipDuplicates = true;
   private busy = false;
   private error = '';
-  private result: { ids: string[] } | null = null;
+  private result: { ids: string[]; ignored: number; blank: number } | null = null;
 
   constructor(
     private readonly root: HTMLElement,
@@ -120,6 +120,19 @@ export class ImportView {
       } else {
         this.table = table;
         this.mapping = guessMapping(table.header);
+        // Se achou a coluna do nome, importa direto. A pessoa pode desfazer depois.
+        if (this.mapping.name !== null) {
+          const total = this.plan();
+          if (total.toImport.length > 0) {
+            this.busy = false;
+            await this.run();
+            return;
+          }
+          this.table = null;
+          this.setError(
+            `Os ${total.drafts.length} equipamentos desse arquivo já estão cadastrados. Nada foi importado.`,
+          );
+        }
       }
     } catch (e) {
       const code = (e as { code?: string }).code;
@@ -157,7 +170,12 @@ export class ImportView {
       const n = this.result.ids.length;
       body.innerHTML =
         `<section class="imp-card"><h2>${n} ${n === 1 ? 'equipamento importado' : 'equipamentos importados'}</h2>` +
-        `<p class="muted">Eles já estão na lista. Se algo ficou errado, você pode desfazer esta importação.</p>` +
+        `<p class="muted">Eles já estão na lista.` +
+        (this.result.ignored > 0 ? ` ${this.result.ignored} já cadastrados foram ignorados.` : '') +
+        (this.result.blank > 0
+          ? ` ${this.result.blank} datas ou valores não foram entendidos e ficaram em branco.`
+          : '') +
+        ` Se algo ficou errado, você pode desfazer esta importação.</p>` +
         `<div class="row-btns"><button type="button" class="btn" data-act="imp-undo">Desfazer importação</button>` +
         `<button type="button" class="btn primary" data-act="imp-list">Ver na lista</button></div></section>`;
       return;
@@ -236,12 +254,17 @@ export class ImportView {
 
   private async run(): Promise<void> {
     if (!this.table || this.busy) return;
-    const items = this.plan().toImport.map((d) => createEquipment(d));
+    const plan = this.plan();
+    const items = plan.toImport.map((d) => createEquipment(d));
     this.busy = true;
     this.renderBody();
     try {
       await this.store.saveMany(items);
-      this.result = { ids: items.map((i) => i.id) };
+      this.result = {
+        ids: items.map((i) => i.id),
+        ignored: this.skipDuplicates ? plan.duplicates.length : 0,
+        blank: plan.warnings,
+      };
       this.table = null;
       toast(`${items.length} equipamentos importados`);
     } catch (e) {
