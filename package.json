@@ -19,7 +19,8 @@
     "format:check": "prettier --check ."
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.117.3"
+    "@supabase/supabase-js": "^2.117.3",
+    "pdfjs-dist": "^6.4.299"
   },
   "devDependencies": {
     "prettier": "^3.9.10",
