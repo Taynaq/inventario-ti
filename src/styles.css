@@ -19,15 +19,15 @@ img {
 /* Layout: uma coluna do tamanho de um celular (máx. 640px). Cabeçalho fixo com busca e filtros,
    cartões com etiqueta de patrimônio e painéis deslizantes para cadastro, edição e detalhe. */
 :root {
-  --bg: #e8ecf0;
+  --bg: #f0f8f2;
   --surface: #ffffff;
-  --surface-2: #f2f5f8;
-  --ink: #111d28;
-  --muted: #566574;
-  --line: #d2dae2;
-  --accent: #0f6b7a;
+  --surface-2: #e6f4ea;
+  --ink: #14281c;
+  --muted: #4d6355;
+  --line: #cde2d3;
+  --accent: #1f7a4a;
   --on-accent: #ffffff;
-  --st-uso: #1e8e55;
+  --st-uso: #2fa866;
   --st-estoque: #2f6fdb;
   --st-manutencao: #b7791f;
   --st-baixado: #7b8794;
@@ -36,33 +36,11 @@ img {
   --bad: #b3261e;
   --bad-bg: #fbe5e3;
   --scrim: rgba(10, 18, 26, 0.45);
+  color-scheme: light;
   --font-display: 'Barlow Condensed', 'Arial Narrow', sans-serif;
   --font-body: 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --font-mono: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
 }
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #0d1318;
-    --surface: #151d25;
-    --surface-2: #1b252f;
-    --ink: #e5ecf2;
-    --muted: #93a2b0;
-    --line: #26323d;
-    --accent: #4dc0d2;
-    --on-accent: #06242a;
-    --st-uso: #3dd68c;
-    --st-estoque: #6aa2ff;
-    --st-manutencao: #f2b84b;
-    --st-baixado: #8c99a6;
-    --warn: #f2b84b;
-    --warn-bg: #352a12;
-    --bad: #ff8a80;
-    --bad-bg: #3a1b19;
-    --scrim: rgba(0, 0, 0, 0.6);
-    color-scheme: dark;
-  }
-}
-
 * {
   box-sizing: border-box;
 }

@@ -46,6 +46,8 @@ Para ver no celular durante o desenvolvimento, rode `npm run dev -- --host` e ab
 
 ## Ligar o modo compartilhado (Supabase)
 
+Guia mais simples, com todos os passos: [GUIA-BANCO-DE-DADOS.md](GUIA-BANCO-DE-DADOS.md).
+
 1. Crie uma conta e um projeto gratuito em [supabase.com](https://supabase.com).
 2. No projeto, abra **SQL Editor**, cole o conteúdo de [`supabase/schema.sql`](supabase/schema.sql) e clique em **Run**. Isso cria as tabelas e as regras de acesso.
 3. Libere seu e-mail: no **SQL Editor** rode `insert into public.allowed_emails (email) values ('voce@suaempresa.com.br');` (em minúsculas). Para liberar outras pessoas, adicione mais e-mails na tabela `allowed_emails` pelo **Table Editor**.
