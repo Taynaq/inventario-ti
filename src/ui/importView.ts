@@ -59,6 +59,7 @@ export class ImportView {
       if (act === 'imp-run') void this.run();
       else if (act === 'imp-reset') this.reset();
       else if (act === 'imp-undo') void this.undo();
+      else if (act === 'imp-wipe') void this.wipe();
       else if (act === 'imp-list') this.showList();
     });
     this.render();
@@ -67,6 +68,37 @@ export class ImportView {
   /** Chamado quando a lista de equipamentos muda, para refazer a checagem de duplicados. */
   update(): void {
     if (this.table && !this.result) this.renderBody();
+    this.renderWipe();
+  }
+
+  /** Cartão "começar do zero": só aparece quando já há equipamentos cadastrados. */
+  private renderWipe(): void {
+    const el = this.root.querySelector<HTMLElement>('#imp-wipe');
+    if (!el) return;
+    const n = this.getItems().length;
+    el.innerHTML =
+      n === 0
+        ? ''
+        : `<section class="imp-card"><h2>Começar do zero</h2>` +
+          `<p class="muted">Apaga os ${n} ${n === 1 ? 'equipamento cadastrado' : 'equipamentos cadastrados'} de uma vez, ` +
+          `para você importar de novo. Não dá para desfazer.</p>` +
+          `<button type="button" class="btn danger" data-act="imp-wipe">Apagar todos os equipamentos</button></section>`;
+  }
+
+  private async wipe(): Promise<void> {
+    const items = this.getItems();
+    if (items.length === 0 || this.busy) return;
+    const answer = window.prompt(
+      `Isto apaga TODOS os ${items.length} equipamentos.\n\nPara confirmar, digite APAGAR:`,
+    );
+    if (answer === null || answer.trim().toUpperCase() !== 'APAGAR') return;
+    try {
+      await this.store.removeMany(items.map((i) => i.id));
+      this.result = null;
+      toast('Todos os equipamentos foram apagados');
+    } catch (e) {
+      toast(describeError(e));
+    }
   }
 
   private reset(): void {
@@ -85,9 +117,10 @@ export class ImportView {
       `<label class="btn primary filebtn" for="imp-file">Escolher arquivo</label>` +
       `<input id="imp-file" type="file" accept=".pdf,.csv,.txt,application/pdf,text/csv" hidden />` +
       `<p class="msg bad" id="imp-err" role="alert"></p></section>` +
-      `<div id="imp-body"></div>`;
+      `<div id="imp-body"></div><div id="imp-wipe"></div>`;
     $('#imp-err').textContent = this.error;
     this.renderBody();
+    this.renderWipe();
   }
 
   private setError(message: string): void {
