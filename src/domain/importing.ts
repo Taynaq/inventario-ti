@@ -481,7 +481,14 @@ export interface DraftsResult {
   warnings: number;
 }
 
-export function toDrafts(rows: readonly (readonly string[])[], mapping: Mapping): DraftsResult {
+export function toDrafts(
+  rows: readonly (readonly string[])[],
+  mapping: Mapping,
+  header: readonly string[] = [],
+): DraftsResult {
+  // Colunas do arquivo que não viraram nenhum campo: vão para as observações, para não perder nada.
+  const used = new Set(Object.values(mapping).filter((v): v is number => v !== null));
+  const extraCols = header.map((_, i) => i).filter((i) => !used.has(i));
   const drafts: EquipmentDraft[] = [];
   let skippedNoName = 0;
   let warnings = 0;
@@ -519,7 +526,16 @@ export function toDrafts(rows: readonly (readonly string[])[], mapping: Mapping)
       buyDate: date('buyDate'),
       warrantyEnd: date('warrantyEnd'),
       value,
-      notes: pick(row, 'notes'),
+      notes: [
+        pick(row, 'notes'),
+        ...extraCols.flatMap((i) => {
+          const v = (row[i] ?? '').trim();
+          const title = (header[i] ?? '').trim() || `Coluna ${i + 1}`;
+          return v ? [`${title}: ${v}`] : [];
+        }),
+      ]
+        .filter(Boolean)
+        .join('\n'),
     });
   }
   return { drafts, skippedNoName, warnings };

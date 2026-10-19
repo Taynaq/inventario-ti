@@ -100,6 +100,15 @@ export class InventoryView {
       this.filters.category = isCategoryId(v) ? v : 'all';
       this.renderList();
     });
+    $('#catChips').addEventListener('click', (e) => {
+      const b = (e.target as Element).closest<HTMLElement>('[data-cat]');
+      if (!b) return;
+      const v = b.dataset.cat;
+      this.filters.category = isCategoryId(v) ? v : 'all';
+      $<HTMLSelectElement>('#catFilter').value = this.filters.category;
+      this.renderHead();
+      this.renderList();
+    });
     $('#chips').addEventListener('click', (e) => {
       const b = (e.target as Element).closest<HTMLElement>('[data-status]');
       if (!b) return;
@@ -200,10 +209,31 @@ export class InventoryView {
     $('#tools').hidden = !show;
     const chips = $('#chips');
     chips.hidden = !show;
+    const catChips = $('#catChips');
+    catChips.hidden = !show;
     if (!show) {
       chips.innerHTML = '';
+      catChips.innerHTML = '';
       return;
     }
+    // Filtro por tipo: só aparecem os tipos que existem na lista.
+    const counts = new Map<string, number>();
+    for (const it of this.items) counts.set(it.category, (counts.get(it.category) ?? 0) + 1);
+    if (this.filters.category !== 'all' && !counts.has(this.filters.category)) this.filters.category = 'all';
+    catChips.innerHTML = [
+      { id: 'all', label: 'Todos os tipos', n: s.total },
+      ...CATEGORIES.filter((c) => counts.has(c.id)).map((c) => ({
+        id: c.id,
+        label: c.label,
+        n: counts.get(c.id) ?? 0,
+      })),
+    ]
+      .map(
+        (d) =>
+          `<button type="button" class="chip" data-cat="${d.id}" aria-pressed="${this.filters.category === d.id}">` +
+          `${esc(d.label)} <span class="n">${d.n}</span></button>`,
+      )
+      .join('');
     const defs: { id: StatusFilter; label: string; n: number; led: string }[] = [
       { id: 'all', label: 'Todos', n: s.total, led: '' },
       ...STATUSES.map((st) => ({ id: st.id, label: st.label, n: s.byStatus[st.id], led: `s-${st.id}` })),

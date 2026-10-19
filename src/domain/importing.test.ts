@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  emptyMapping,
   guessCategory,
   guessMapping,
   guessStatus,
@@ -234,5 +235,18 @@ describe('tableFromTextItems (texto de PDF)', () => {
 
   it('devolve tabela vazia quando não há texto', () => {
     expect(tableFromTextItems([])).toEqual({ header: [], rows: [] });
+  });
+
+  it('guarda em observações as colunas que não viraram campo', () => {
+    const header = ['Equipamento', 'Processador', 'Memória'];
+    const mapping = { ...emptyMapping(), name: 0 };
+    const { drafts } = toDrafts([['Notebook Dell', 'i5 1135G7', '16 GB']], mapping, header);
+    expect(drafts[0]?.notes).toBe('Processador: i5 1135G7\nMemória: 16 GB');
+  });
+
+  it('reconhece o tipo pelo nome do equipamento', () => {
+    const mapping = { ...emptyMapping(), name: 0 };
+    const { drafts } = toDrafts([['Impressora HP LaserJet'], ['Notebook Lenovo'], ['iPhone 13']], mapping);
+    expect(drafts.map((d) => d.category)).toEqual(['impressora', 'notebook', 'celular']);
   });
 });

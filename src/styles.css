@@ -104,7 +104,7 @@ h1 {
 }
 .tools {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr);
   gap: 8px;
 }
 .search {
@@ -986,4 +986,11 @@ button.legend-btn:disabled {
 }
 .row-btns .btn {
   flex: 1 1 160px;
+}
+
+/* filtro por tipo */
+#catChips .chip[aria-pressed='true'] {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--on-accent);
 }

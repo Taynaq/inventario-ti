@@ -152,7 +152,7 @@ export class ImportView {
   /** Calcula o que será importado com as escolhas atuais. */
   private plan() {
     const table = this.table as ParsedTable;
-    const built = toDrafts(table.rows, this.mapping);
+    const built = toDrafts(table.rows, this.mapping, table.header);
     const { fresh, duplicates } = splitDuplicates(this.getItems(), built.drafts);
     return { ...built, toImport: this.skipDuplicates ? fresh : built.drafts, duplicates };
   }
