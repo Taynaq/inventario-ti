@@ -143,10 +143,11 @@ describe('splitDuplicates', () => {
         { ...base, name: 'C', tag: 'PAT-2', serial: '' },
         { ...base, name: 'D', tag: '', serial: '' },
         { ...base, name: 'E', tag: '', serial: '' },
+        { ...base, name: 'B', tag: 'PAT-2', serial: 'S1' },
       ],
     );
-    expect(duplicates.map((d) => d.name)).toEqual(['A', 'C']);
-    expect(fresh.map((d) => d.name)).toEqual(['B', 'D', 'E']);
+    expect(duplicates.map((d) => d.name)).toEqual(['A', 'B']);
+    expect(fresh.map((d) => d.name)).toEqual(['B', 'C', 'D', 'E']);
   });
 });
 
@@ -248,5 +249,51 @@ describe('tableFromTextItems (texto de PDF)', () => {
     const mapping = { ...emptyMapping(), name: 0 };
     const { drafts } = toDrafts([['Impressora HP LaserJet'], ['Notebook Lenovo'], ['iPhone 13']], mapping);
     expect(drafts.map((d) => d.category)).toEqual(['impressora', 'notebook', 'celular']);
+  });
+
+  it('lê exportação com linhas coladas, título em negrito e palavras cortadas (GLPI)', () => {
+    const w = (text: string, x: number, y: number, font: string, width = text.length * 5): TextItem => ({
+      text,
+      x,
+      y,
+      width,
+      height: 8,
+      page: 1,
+      font,
+    });
+    const items: TextItem[] = [
+      w('Nome', 30, 800, 'b'),
+      w('Status', 90, 800, 'b'),
+      w('Fabricant', 150, 800, 'b', 45),
+      w('e', 150, 790, 'b'),
+      w('Tipo', 210, 800, 'b'),
+      w('Modelo', 270, 800, 'b'),
+      // registro 1: duas linhas (o modelo quebrou)
+      w('BRIAN', 30, 780, 'r'),
+      w('OCUPADO', 90, 780, 'r'),
+      w('ACER', 150, 780, 'r'),
+      w('NOTEBOOK', 210, 780, 'r'),
+      w('ASPIRE', 270, 780, 'r'),
+      w('3-15', 270, 770, 'r'),
+      // registro 2: uma linha só
+      w('TÂMARA', 30, 760, 'r'),
+      w('OCUPADO', 90, 760, 'r'),
+      w('LENOVO', 150, 760, 'r'),
+      w('NOTEBOOK', 210, 760, 'r'),
+      w('LENOVO IDEAPAD', 270, 760, 'r'),
+      // rodapé que não faz parte da tabela
+      w('Powered by TCPDF', 3, 1, 'r'),
+    ];
+    const table = tableFromTextItems(items);
+    expect(table.header).toEqual(['Nome', 'Status', 'Fabricante', 'Tipo', 'Modelo']);
+    expect(table.rows).toEqual([
+      ['BRIAN', 'OCUPADO', 'ACER', 'NOTEBOOK', 'ASPIRE 3-15'],
+      ['TÂMARA', 'OCUPADO', 'LENOVO', 'NOTEBOOK', 'LENOVO IDEAPAD'],
+    ]);
+    const { drafts } = toDrafts(table.rows, guessMapping(table.header), table.header);
+    expect(drafts.map((d) => [d.name, d.owner, d.category])).toEqual([
+      ['ACER ASPIRE 3-15', 'BRIAN', 'notebook'],
+      ['LENOVO IDEAPAD', 'TÂMARA', 'notebook'],
+    ]);
   });
 });

@@ -40,6 +40,7 @@ export async function readPdfText(file: File): Promise<TextItem[]> {
         width: it.width,
         height: it.height,
         page: p,
+        font: it.fontName,
       });
     }
   }
