@@ -16,18 +16,22 @@ import { $, esc, toast } from './dom';
 import { DashboardView } from './dashboardView';
 import { categoryIcon } from './icons';
 import { ImportView } from './importView';
+import { AccessView } from './accessView';
+import type { AccessApi } from '../data/access';
 
 export interface ViewOptions {
   /** E-mail de quem está usando (modo compartilhado). */
   account?: string;
   /** Presente no modo compartilhado: mostra o botão "Sair". */
   onSignOut?: () => void;
+  /** Presente no modo compartilhado: permite à pessoa administradora liberar e-mails. */
+  access?: AccessApi;
 }
 
 const option = (value: string, label: string): string =>
   `<option value="${esc(value)}">${esc(label)}</option>`;
 
-type Tab = 'lista' | 'painel' | 'importar';
+type Tab = 'lista' | 'painel' | 'importar' | 'acessos';
 
 export class InventoryView {
   private items: Equipment[] = [];
@@ -42,6 +46,7 @@ export class InventoryView {
   private tab: Tab = 'lista';
   private dash!: DashboardView;
   private importer!: ImportView;
+  private accessView: AccessView | null = null;
 
   constructor(
     private readonly store: Store,
@@ -70,6 +75,14 @@ export class InventoryView {
       () => this.items,
       () => this.setTab('lista'),
     );
+    const access = this.opts.access;
+    if (access) {
+      void access.isAdmin().then((ok) => {
+        if (!ok) return;
+        this.accessView = new AccessView($('#viewAccess'), access);
+        document.querySelector<HTMLElement>('[data-tab="acessos"]')!.hidden = false;
+      });
+    }
     this.bind();
     this.render();
     this.store.subscribe(
@@ -135,7 +148,7 @@ export class InventoryView {
     });
     $('#tabs').addEventListener('click', (e) => {
       const tab = (e.target as Element).closest<HTMLElement>('[data-tab]')?.dataset.tab;
-      if (tab === 'lista' || tab === 'painel' || tab === 'importar') this.setTab(tab);
+      if (tab === 'lista' || tab === 'painel' || tab === 'importar' || tab === 'acessos') this.setTab(tab);
     });
     $('#addBtn').addEventListener('click', () => this.openForm(null));
     $('#scrim').addEventListener('click', () => this.closeSheets());
@@ -163,7 +176,9 @@ export class InventoryView {
     $('#viewList').hidden = tab !== 'lista';
     $('#viewDash').hidden = tab !== 'painel';
     $('#viewImport').hidden = tab !== 'importar';
-    $('#addBtn').hidden = tab === 'importar';
+    $('#viewAccess').hidden = tab !== 'acessos';
+    $('#addBtn').hidden = tab === 'importar' || tab === 'acessos';
+    if (tab === 'acessos') void this.accessView?.refresh();
     this.render();
     window.scrollTo(0, 0);
   }

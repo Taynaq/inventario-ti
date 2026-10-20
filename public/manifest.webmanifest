@@ -1,6 +1,6 @@
 {
-  "name": "Inventário de TI",
-  "short_name": "Inventário TI",
+  "name": "Ativos TI",
+  "short_name": "Ativos TI",
   "description": "Controle dos equipamentos de TI da empresa.",
   "lang": "pt-BR",
   "start_url": "./",

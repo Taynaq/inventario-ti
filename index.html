@@ -8,7 +8,7 @@
       name="description"
       content="Controle dos equipamentos de TI da empresa: cadastro, responsável, patrimônio, status e garantia."
     />
-    <title>Inventário de TI</title>
+    <title>Ativos TI</title>
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="icon" href="icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="icon-192.png" />
@@ -26,13 +26,14 @@
     <div class="app" id="app" hidden>
       <header class="top">
         <div class="titlebar">
-          <h1>Inventário de TI</h1>
+          <h1>Ativos TI</h1>
           <p class="summary" id="summary">Carregando…</p>
         </div>
         <nav class="tabs" id="tabs" aria-label="Seções do app">
           <button type="button" class="tab" data-tab="lista" aria-current="page">Lista</button>
           <button type="button" class="tab" data-tab="painel">Painel</button>
           <button type="button" class="tab" data-tab="importar">Importar</button>
+          <button type="button" class="tab" data-tab="acessos" hidden>Acessos</button>
         </nav>
         <div class="tools" id="tools" hidden>
           <div class="search">
@@ -78,6 +79,7 @@
         </div>
         <div id="viewDash" hidden></div>
         <div id="viewImport" hidden></div>
+        <div id="viewAccess" hidden></div>
         <p class="foot">
           <span id="foot"></span><button type="button" class="link" id="signOut" hidden>Sair</button>
         </p>

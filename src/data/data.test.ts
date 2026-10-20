@@ -1,3 +1,4 @@
+import { accessErrorMessage, isValidEmail, normalizeEmail } from './access';
 import { describe, expect, it, vi } from 'vitest';
 import { createEquipment } from '../domain/equipment';
 import { fromRow, toRow } from './cloudStore';
@@ -126,5 +127,20 @@ describe('describeError', () => {
     expect(describeError(new StoreError('network', 'x'))).toMatch(/conexão/);
     expect(describeError(new StoreError('denied', 'x'))).toMatch(/permissão/);
     expect(describeError(new Error('qualquer'))).toMatch(/Não foi possível/);
+  });
+});
+
+describe('acessos', () => {
+  it('normaliza e valida e-mails', () => {
+    expect(normalizeEmail('  Ana@Empresa.COM ')).toBe('ana@empresa.com');
+    expect(isValidEmail('ana@empresa.com.br')).toBe(true);
+    expect(isValidEmail('ana@empresa')).toBe(false);
+    expect(isValidEmail('ana empresa.com')).toBe(false);
+  });
+
+  it('traduz erros do banco', () => {
+    expect(accessErrorMessage({ code: '23505' })).toBe('Esse e-mail já está na lista.');
+    expect(accessErrorMessage({ code: '42501' })).toMatch(/permissão/);
+    expect(accessErrorMessage(null)).toBe('Não foi possível concluir.');
   });
 });

@@ -1,4 +1,4 @@
-# Inventário de TI
+# Ativos TI
 
 Aplicativo web para celular que controla os equipamentos de TI da empresa: notebooks, celulares, monitores, impressoras, rede e o que mais você tiver. Cada equipamento tem responsável, local, número de série, patrimônio, status, data de compra, garantia e valor. O app avisa quando uma garantia está vencida ou perto de vencer.
 
@@ -12,6 +12,10 @@ Gratuito e de código aberto (licença MIT). Funciona no navegador do celular e 
 | **Compartilhado**  | A equipe toda no mesmo inventário | No Supabase (plano gratuito)   | Sim, e-mail e senha |
 
 O modo é escolhido pelas variáveis de ambiente. Sem elas, o app roda em modo local.
+
+## Acessos (modo compartilhado)
+
+Administradores veem a aba **Acessos**, onde liberam e removem os e-mails que podem usar o app. A pessoa liberada cria a própria conta (e a própria senha) na tela de login. Para ativar, rode `supabase/acessos.sql` no Supabase (veja o `GUIA-BANCO-DE-DADOS.md`).
 
 ## Painel e importação
 

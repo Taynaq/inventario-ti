@@ -36,7 +36,7 @@ export function requireMember(db: SupabaseClient): Promise<string> {
       if (mode === 'denied') {
         root.innerHTML = `
           <div class="auth-card">
-            <h1>Inventário de TI</h1>
+            <h1>Ativos TI</h1>
             <p><strong>${esc(email)}</strong> ainda não foi liberado para usar este inventário.</p>
             <p>Peça ao administrador para incluir seu e-mail na lista de acesso e entre de novo.</p>
             <button type="button" class="btn" id="auth-out">Sair</button>
@@ -51,7 +51,7 @@ export function requireMember(db: SupabaseClient): Promise<string> {
       const recovery = mode === 'recovery';
       root.innerHTML = `
         <div class="auth-card">
-          <h1>Inventário de TI</h1>
+          <h1>Ativos TI</h1>
           <p>${recovery ? 'Defina uma nova senha.' : 'Entre com seu e-mail de trabalho.'}</p>
           <form id="auth-form" novalidate>
             ${

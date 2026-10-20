@@ -1,4 +1,4 @@
-# Ligar o banco de dados e o login (passo a passo)
+# Ativos TI: ligar o banco de dados e o login (passo a passo)
 
 Faça isto uma vez. Depois disso, todos os colaboradores veem os mesmos equipamentos e entram com e-mail e senha.
 
@@ -21,6 +21,13 @@ insert into public.allowed_emails (email) values ('seu@email.com');
 ```
 
 Para liberar outra pessoa, rode a mesma linha com o e-mail dela. Para tirar o acesso, vá em **Table Editor**, abra `allowed_emails` e apague a linha.
+
+## 3b. Ativar a aba "Acessos" (para liberar pessoas dentro do app)
+
+1. No **SQL Editor**, clique em **New query**.
+2. Abra o arquivo `supabase/acessos.sql`, copie tudo e cole.
+3. Na **última linha**, troque `seu@email.com` pelo seu e-mail (em minúsculas) e clique em **Run**.
+4. Depois disso, quando você entrar no app, aparece a aba **Acessos**. Nela você digita o e-mail de cada pessoa e toca em **Liberar acesso**. A pessoa abre o app, toca em **Criar conta** com aquele e-mail e escolhe a própria senha.
 
 ## 4. Pegar as duas chaves
 
