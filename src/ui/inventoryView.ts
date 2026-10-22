@@ -20,8 +20,6 @@ import { ImportView } from './importView';
 export interface ViewOptions {
   /** E-mail de quem está usando (modo compartilhado). */
   account?: string;
-  /** Presente no modo compartilhado: mostra o botão "Sair". */
-  onSignOut?: () => void;
 }
 
 const option = (value: string, label: string): string =>
@@ -56,11 +54,6 @@ export class InventoryView {
       option('all', 'Todas') + CATEGORIES.map((c) => option(c.id, c.label)).join('');
     $('#f-cat').innerHTML = CATEGORIES.map((c) => option(c.id, c.label)).join('');
     $('#f-status').innerHTML = STATUSES.map((s) => option(s.id, s.label)).join('');
-    if (this.opts.onSignOut) {
-      const out = $('#signOut');
-      out.hidden = false;
-      out.addEventListener('click', this.opts.onSignOut);
-    }
     this.dash = new DashboardView($('#viewDash'), {
       showList: (f) => this.showList(f),
       add: () => this.openForm(null),

@@ -17,15 +17,89 @@ export interface Breakdown {
 
 export type BreakdownDraft = Omit<Breakdown, 'id' | 'createdAt' | 'updatedAt'>;
 
+export type PeriodId = 'all' | 'today' | '7d' | '30d' | 'month' | 'lastmonth' | 'custom';
+
+export const PERIODS: { id: PeriodId; label: string }[] = [
+  { id: 'all', label: 'Tudo' },
+  { id: 'today', label: 'Hoje' },
+  { id: '7d', label: '7 dias' },
+  { id: '30d', label: '30 dias' },
+  { id: 'month', label: 'Este mês' },
+  { id: 'lastmonth', label: 'Mês passado' },
+  { id: 'custom', label: 'Escolher datas' },
+];
+
 export interface BreakdownFilters {
   query: string;
   /** 'all' ou o nome do grupo. */
   group: string;
-  /** 'all' ou AAAA-MM. */
-  month: string;
+  period: PeriodId;
+  /** Datas AAAA-MM-DD do período "Escolher datas" (vazio = sem limite). */
+  from: string;
+  to: string;
 }
 
-export const EMPTY_BREAKDOWN_FILTERS: BreakdownFilters = { query: '', group: 'all', month: 'all' };
+export const EMPTY_BREAKDOWN_FILTERS: BreakdownFilters = {
+  query: '',
+  group: 'all',
+  period: 'all',
+  from: '',
+  to: '',
+};
+
+export interface DayRange {
+  /** AAAA-MM-DD, ou vazio para "sem início". */
+  from: string;
+  /** AAAA-MM-DD, ou vazio para "sem fim". */
+  to: string;
+}
+
+const pad2 = (n: number): string => String(n).padStart(2, '0');
+const isoOf = (d: Date): string => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+
+/** Soma dias a uma data AAAA-MM-DD. */
+export function addDays(day: string, n: number): string {
+  const [y = 0, m = 1, d = 1] = day.split('-').map(Number);
+  const t = new Date(Date.UTC(y, m - 1, d + n));
+  return `${t.getUTCFullYear()}-${pad2(t.getUTCMonth() + 1)}-${pad2(t.getUTCDate())}`;
+}
+
+/** Transforma o período escolhido em datas de início e fim (inclusive). */
+export function periodRange(
+  f: Pick<BreakdownFilters, 'period' | 'from' | 'to'>,
+  today: Date = new Date(),
+): DayRange {
+  const now = isoOf(today);
+  switch (f.period) {
+    case 'today':
+      return { from: now, to: now };
+    case '7d':
+      return { from: addDays(now, -6), to: now };
+    case '30d':
+      return { from: addDays(now, -29), to: now };
+    case 'month': {
+      const first = `${today.getFullYear()}-${pad2(today.getMonth() + 1)}-01`;
+      return { from: first, to: isoOf(new Date(today.getFullYear(), today.getMonth() + 1, 0)) };
+    }
+    case 'lastmonth': {
+      const first = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+      return { from: isoOf(first), to: isoOf(new Date(today.getFullYear(), today.getMonth(), 0)) };
+    }
+    case 'custom':
+      return { from: f.from, to: f.to };
+    default:
+      return { from: '', to: '' };
+  }
+}
+
+/** Texto do período para títulos, como "19/10 a 25/10". */
+export function rangeLabel(r: DayRange): string {
+  const br = (d: string): string => d.split('-').reverse().join('/');
+  if (!r.from && !r.to) return 'Todo o período';
+  if (r.from && r.from === r.to) return br(r.from);
+  if (r.from && r.to) return `${br(r.from)} a ${br(r.to)}`;
+  return r.from ? `A partir de ${br(r.from)}` : `Até ${br(r.to)}`;
+}
 
 const str = (v: unknown): string => (typeof v === 'string' ? v : '');
 const isIsoDay = (v: string): boolean => /^\d{4}-\d{2}-\d{2}$/.test(v) && !Number.isNaN(Date.parse(v));
@@ -96,14 +170,20 @@ export function applyBreakdownDraft(
 
 const searchText = (b: Breakdown): string => normalize([b.machine, b.group, b.notes].join(' '));
 
-/** Aplica busca, grupo e mês. Mais recentes primeiro. */
-export function filterBreakdowns(items: readonly Breakdown[], f: BreakdownFilters): Breakdown[] {
+/** Aplica busca, grupo e período. Mais recentes primeiro. */
+export function filterBreakdowns(
+  items: readonly Breakdown[],
+  f: BreakdownFilters,
+  today: Date = new Date(),
+): Breakdown[] {
   const q = normalize(f.query).trim();
   const group = normalize(f.group);
+  const range = periodRange(f, today);
   return items
     .filter((b) => {
       if (f.group !== 'all' && normalize(b.group) !== group) return false;
-      if (f.month !== 'all' && !b.day.startsWith(f.month)) return false;
+      if (range.from && b.day < range.from) return false;
+      if (range.to && b.day > range.to) return false;
       return q === '' || searchText(b).includes(q);
     })
     .sort((a, b) => b.day.localeCompare(a.day) || b.createdAt - a.createdAt);
@@ -199,4 +279,82 @@ export function summarizeBreakdowns(items: readonly Breakdown[], maxBars = 8): B
       maxBars,
     ),
   };
+}
+
+export interface DaySummary {
+  day: string;
+  /** Quantidade de quebras (registros) no dia. */
+  breaks: number;
+  /** Máquinas diferentes que quebraram no dia. */
+  machines: string[];
+  lostParts: number;
+}
+
+/** Um resumo por dia, do mais recente para o mais antigo. */
+export function summarizeDays(items: readonly Breakdown[]): DaySummary[] {
+  const byDay = new Map<string, { breaks: number; machines: Map<string, string>; parts: number }>();
+  for (const b of items) {
+    const d = byDay.get(b.day) ?? { breaks: 0, machines: new Map<string, string>(), parts: 0 };
+    d.breaks += 1;
+    d.parts += b.lostParts;
+    const key = normalize(b.machine);
+    if (!d.machines.has(key)) d.machines.set(key, b.machine);
+    byDay.set(b.day, d);
+  }
+  return [...byDay.entries()]
+    .sort((a, b) => b[0].localeCompare(a[0]))
+    .map(([day, d]) => ({
+      day,
+      breaks: d.breaks,
+      machines: [...d.machines.values()].sort((a, b) => a.localeCompare(b, 'pt-BR')),
+      lostParts: d.parts,
+    }));
+}
+
+export interface PeriodKpis {
+  breaks: number;
+  machines: number;
+  lostParts: number;
+  daysWithBreaks: number;
+}
+
+export function periodKpis(items: readonly Breakdown[]): PeriodKpis {
+  const machines = new Set(items.map((b) => normalize(b.machine)));
+  const days = new Set(items.map((b) => b.day));
+  return {
+    breaks: items.length,
+    machines: machines.size,
+    lostParts: items.reduce((sum, b) => sum + b.lostParts, 0),
+    daysWithBreaks: days.size,
+  };
+}
+
+/** Dias que o gráfico mostra no máximo. */
+export const MAX_CHART_DAYS = 31;
+
+/**
+ * Série diária para o gráfico, do dia mais antigo ao mais recente. Quando o período cabe em
+ * 31 dias, os dias sem quebra aparecem com zero. Senão, mostra só os 31 dias mais recentes com quebra.
+ */
+export function dailySeries(
+  days: readonly DaySummary[],
+  range: DayRange,
+): { points: DaySummary[]; truncated: boolean } {
+  if (days.length === 0) return { points: [], truncated: false };
+  const oldest = days[days.length - 1]?.day ?? '';
+  const newest = days[0]?.day ?? '';
+  const from = range.from || oldest;
+  const to = range.to || newest;
+  const span = Math.round((Date.parse(to) - Date.parse(from)) / 86_400_000) + 1;
+  if (span >= 1 && span <= MAX_CHART_DAYS) {
+    const byDay = new Map(days.map((d) => [d.day, d] as const));
+    const points: DaySummary[] = [];
+    for (let i = 0; i < span; i++) {
+      const day = addDays(from, i);
+      points.push(byDay.get(day) ?? { day, breaks: 0, machines: [], lostParts: 0 });
+    }
+    return { points, truncated: false };
+  }
+  const recent = days.slice(0, MAX_CHART_DAYS).reverse();
+  return { points: recent, truncated: days.length > MAX_CHART_DAYS };
 }

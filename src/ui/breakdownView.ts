@@ -5,11 +5,15 @@ import {
   applyBreakdownDraft,
   createBreakdown,
   filterBreakdowns,
+  PERIODS,
+  dailySeries,
   groupsOf,
-  monthLabel,
-  monthsOf,
+  periodKpis,
+  periodRange,
+  rangeLabel,
   readBreakdown,
   summarizeBreakdowns,
+  summarizeDays,
   type Breakdown,
   type BreakdownFilters,
   type BreakdownInput,
@@ -18,7 +22,11 @@ import { isoDateIn, normalize } from '../domain/format';
 import { bars, panel, pct } from './bars';
 import { $, esc, toast } from './dom';
 
-type Tab = 'registros' | 'resumo';
+type Tab = 'registros' | 'datas' | 'resumo';
+
+const WEEKDAYS = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'];
+const weekday = (day: string): string => WEEKDAYS[new Date(`${day}T12:00:00`).getDay()] ?? '';
+const shortDay = (day: string): string => day.split('-').reverse().slice(0, 2).join('/');
 
 const SHORT_MONTHS = ['JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN', 'JUL', 'AGO', 'SET', 'OUT', 'NOV', 'DEZ'];
 
@@ -74,15 +82,35 @@ export class BreakdownView {
   private bind(): void {
     $('#tabsQ').addEventListener('click', (e) => {
       const tab = (e.target as Element).closest<HTMLElement>('[data-qtab]')?.dataset.qtab;
-      if (tab === 'registros' || tab === 'resumo') this.setTab(tab);
+      if (tab === 'registros' || tab === 'datas' || tab === 'resumo') this.setTab(tab);
     });
     $<HTMLInputElement>('#qSearch').addEventListener('input', (e) => {
       this.filters.query = (e.target as HTMLInputElement).value;
       this.render();
     });
-    $<HTMLSelectElement>('#qMonth').addEventListener('change', (e) => {
-      this.filters.month = (e.target as HTMLSelectElement).value;
+    $('#qPeriod').addEventListener('click', (e) => {
+      const id = (e.target as Element).closest<HTMLElement>('[data-period]')?.dataset.period;
+      const found = PERIODS.find((x) => x.id === id);
+      if (!found) return;
+      this.filters.period = found.id;
       this.render();
+    });
+    for (const id of ['#qFrom', '#qTo']) {
+      $<HTMLInputElement>(id).addEventListener('change', () => {
+        this.filters.from = $<HTMLInputElement>('#qFrom').value;
+        this.filters.to = $<HTMLInputElement>('#qTo').value;
+        this.render();
+      });
+    }
+    $('#qViewDays').addEventListener('click', (e) => {
+      const el = (e.target as Element).closest<HTMLElement>('[data-day],[data-go]');
+      if (el?.dataset.go === 'add:') return this.openForm(null);
+      const day = el?.dataset.day;
+      if (!day) return;
+      // Toque num dia: abre os registros só daquele dia.
+      this.filters = { ...EMPTY_BREAKDOWN_FILTERS, period: 'custom', from: day, to: day };
+      $<HTMLInputElement>('#qSearch').value = '';
+      this.setTab('registros');
     });
     $('#qGroups').addEventListener('click', (e) => {
       const b = (e.target as Element).closest<HTMLElement>('[data-group]');
@@ -105,10 +133,9 @@ export class BreakdownView {
       const go = (e.target as Element).closest<HTMLElement>('[data-go]')?.dataset.go ?? '';
       const [kind, ...rest] = go.split(':');
       const value = decodeURIComponent(rest.join(':'));
-      if (kind === 'machine')
-        this.filters = { ...EMPTY_BREAKDOWN_FILTERS, month: this.filters.month, query: value };
-      else if (kind === 'group')
-        this.filters = { ...EMPTY_BREAKDOWN_FILTERS, month: this.filters.month, group: value };
+      const keep = { period: this.filters.period, from: this.filters.from, to: this.filters.to };
+      if (kind === 'machine') this.filters = { ...EMPTY_BREAKDOWN_FILTERS, ...keep, query: value };
+      else if (kind === 'group') this.filters = { ...EMPTY_BREAKDOWN_FILTERS, ...keep, group: value };
       else if (kind === 'add') return this.openForm(null);
       else return;
       $<HTMLInputElement>('#qSearch').value = this.filters.query;
@@ -150,10 +177,7 @@ export class BreakdownView {
 
   private render(): void {
     if (!this.active) return;
-    // Filtros que deixaram de existir (por exemplo, o último registro daquele mês foi apagado).
-    if (this.filters.month !== 'all' && !monthsOf(this.items).includes(this.filters.month)) {
-      this.filters.month = 'all';
-    }
+    // Filtro de grupo que deixou de existir (por exemplo, o último registro dele foi apagado).
     if (
       this.filters.group !== 'all' &&
       !groupsOf(this.items).some((g) => normalize(g) === normalize(this.filters.group))
@@ -174,22 +198,29 @@ export class BreakdownView {
     $('#toolsQ').hidden = !show;
     this.renderChips(show);
     $('#qViewList').hidden = this.tab !== 'registros';
+    $('#qViewDays').hidden = this.tab !== 'datas';
     $('#qViewSum').hidden = this.tab !== 'resumo';
     $('#tabsQ').hidden = !show;
     if (this.tab === 'registros') this.renderList();
+    else if (this.tab === 'datas') this.renderDays();
     else this.renderSummary();
   }
 
   private renderChips(show: boolean): void {
-    const months = monthsOf(this.items);
-    $('#qMonth').innerHTML =
-      `<option value="all">Todos os meses</option>` +
-      months
-        .map(
-          (m) =>
-            `<option value="${m}"${m === this.filters.month ? ' selected' : ''}>${esc(monthLabel(m))}</option>`,
-        )
-        .join('');
+    // Período
+    const period = $('#qPeriod');
+    period.hidden = !show;
+    $('#qRange').hidden = !show || this.filters.period !== 'custom';
+    $<HTMLInputElement>('#qFrom').value = this.filters.from;
+    $<HTMLInputElement>('#qTo').value = this.filters.to;
+    period.innerHTML = show
+      ? PERIODS.map(
+          (p) =>
+            `<button type="button" class="chip" data-period="${p.id}" aria-pressed="${this.filters.period === p.id}">${esc(p.label)}</button>`,
+        ).join('')
+      : '';
+
+    // Grupos
     const chips = $('#qGroups');
     const groups = groupsOf(this.items);
     chips.hidden = !show || groups.length === 0;
@@ -197,13 +228,14 @@ export class BreakdownView {
       chips.innerHTML = '';
       return;
     }
-    const inMonth = this.items.filter(
-      (b) => this.filters.month === 'all' || b.day.startsWith(this.filters.month),
+    const range = periodRange(this.filters);
+    const inRange = this.items.filter(
+      (b) => (!range.from || b.day >= range.from) && (!range.to || b.day <= range.to),
     );
-    const count = (g: string): number => inMonth.filter((b) => normalize(b.group) === normalize(g)).length;
+    const count = (g: string): number => inRange.filter((b) => normalize(b.group) === normalize(g)).length;
     const pressed = (g: string): boolean =>
       g === 'all' ? this.filters.group === 'all' : normalize(this.filters.group) === normalize(g);
-    chips.innerHTML = [{ id: 'all', label: 'Todos os grupos', n: inMonth.length }]
+    chips.innerHTML = [{ id: 'all', label: 'Todos os grupos', n: inRange.length }]
       .concat(groups.map((g) => ({ id: g, label: g, n: count(g) })))
       .map(
         (d) =>
@@ -272,7 +304,7 @@ export class BreakdownView {
     const s = summarizeBreakdowns(rows);
     const topParts = s.byMachine[0];
     const topBreaks = s.breaksByMachine[0];
-    const period = this.filters.month === 'all' ? 'Todo o período' : monthLabel(this.filters.month);
+    const period = rangeLabel(periodRange(this.filters));
     const kpis =
       `<section class="kpis" aria-label="Resumo">` +
       `<div class="hero"><p class="lbl">Peças perdidas</p><p class="hero-n">${s.lostParts}</p>` +
@@ -289,6 +321,77 @@ export class BreakdownView {
       panel('Peças perdidas por grupo', 'Toque para ver os registros.', bars(s.byGroup, 'group')) +
       panel('Quebras por máquina', 'Quantas vezes cada máquina quebrou.', bars(s.breaksByMachine, null)) +
       panel('Peças perdidas por dia', 'Os dias mais recentes.', bars(s.byDay, null));
+  }
+
+  private renderDays(): void {
+    const root = $('#qViewDays');
+    if (!this.ready) {
+      root.innerHTML = '<div class="skel"></div>';
+      return;
+    }
+    const rows = filterBreakdowns(this.items, this.filters);
+    const range = periodRange(this.filters);
+    const label = rangeLabel(range);
+    if (rows.length === 0) {
+      root.innerHTML =
+        `<div class="empty"><h2>Nenhuma quebra neste período</h2><p>${esc(label)}. Mude o período acima ou registre uma quebra.</p>` +
+        '<div class="actions"><button type="button" class="btn primary" data-go="add:">Registrar quebra</button></div></div>';
+      return;
+    }
+    const k = periodKpis(rows);
+    const days = summarizeDays(rows);
+    const { points, truncated } = dailySeries(days, range);
+    const max = Math.max(1, ...points.map((p) => p.breaks));
+
+    const kpis =
+      `<section class="kpis" aria-label="Resumo do período">` +
+      `<div class="hero"><p class="lbl">Quebras no período</p><p class="hero-n">${k.breaks}</p>` +
+      `<p class="panel-note">${esc(label)}</p></div>` +
+      `<div class="tiles tiles3">` +
+      `<div class="tile-k"><p class="lbl">Máquinas</p><p class="tile-n">${k.machines}</p><p class="panel-note">diferentes</p></div>` +
+      `<div class="tile-k"><p class="lbl">Peças perdidas</p><p class="tile-n">${k.lostParts}</p><p class="panel-note">no período</p></div>` +
+      `<div class="tile-k"><p class="lbl">Dias com quebra</p><p class="tile-n">${k.daysWithBreaks}</p><p class="panel-note">${days.length === 1 ? 'dia' : 'dias'}</p></div>` +
+      `</div></section>`;
+
+    const columns = points
+      .map((p) => {
+        const h = p.breaks === 0 ? 2 : Math.max(6, Math.round((p.breaks / max) * 100));
+        const title = `${shortDay(p.day)}: ${p.breaks} ${p.breaks === 1 ? 'quebra' : 'quebras'}, ${p.machines.length} ${p.machines.length === 1 ? 'máquina' : 'máquinas'}`;
+        const inner =
+          `<span class="col-n">${p.breaks > 0 ? p.breaks : ''}</span>` +
+          `<span class="col-bar" style="height:${h}px"></span>` +
+          `<span class="col-l">${esc(shortDay(p.day))}</span>`;
+        return p.breaks > 0
+          ? `<button type="button" class="col" data-day="${esc(p.day)}" title="${esc(title)}">${inner}</button>`
+          : `<div class="col col-empty" title="${esc(title)}">${inner}</div>`;
+      })
+      .join('');
+    const chart =
+      `<div class="cols-wrap"><div class="cols" role="img" aria-label="Quebras por dia">${columns}</div></div>` +
+      (truncated
+        ? `<p class="panel-note">Mostrando os ${points.length} dias mais recentes com quebra.</p>`
+        : '');
+
+    const list = days
+      .map((d) => {
+        const names =
+          d.machines.slice(0, 4).join(', ') +
+          (d.machines.length > 4 ? ` e mais ${d.machines.length - 4}` : '');
+        return (
+          `<li><button type="button" class="dayrow" data-day="${esc(d.day)}">` +
+          `<span class="daylbl"><b>${esc(shortDay(d.day))}</b><i>${esc(weekday(d.day))}</i></span>` +
+          `<span class="daymain"><span class="dayname">${d.breaks} ${d.breaks === 1 ? 'quebra' : 'quebras'} · ` +
+          `${d.machines.length} ${d.machines.length === 1 ? 'máquina' : 'máquinas'}</span>` +
+          `<span class="sub">${esc(names)}</span></span>` +
+          `<span class="pill warn">${d.lostParts} ${d.lostParts === 1 ? 'peça' : 'peças'}</span></button></li>`
+        );
+      })
+      .join('');
+
+    root.innerHTML =
+      kpis +
+      panel('Quebras por dia', 'Toque num dia para ver os registros.', chart) +
+      panel('Dia a dia', 'Quantas quebras e quais máquinas em cada data.', `<ul class="wlist">${list}</ul>`);
   }
 
   // ---------- formulário ----------

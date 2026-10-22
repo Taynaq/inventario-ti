@@ -1074,7 +1074,7 @@ button.legend-btn:disabled {
   box-shadow: none;
 }
 .tools2 {
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr);
 }
 
 /* quebra de máquinas */
@@ -1125,4 +1125,124 @@ button.legend-btn:disabled {
   h1 {
     font-size: 28px;
   }
+}
+
+/* quebras: período e gráfico por dia */
+.range {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.range .field {
+  margin: 0;
+}
+.tiles3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.tiles3 .tile-n {
+  font-size: 28px;
+}
+.cols-wrap {
+  overflow-x: auto;
+  margin-inline: -4px;
+  padding: 6px 4px 2px;
+}
+.cols {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  min-width: min-content;
+  height: 150px;
+}
+.col {
+  flex: 1 0 28px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+}
+.col-empty {
+  cursor: default;
+}
+.col-n {
+  font: 600 12px var(--font-mono);
+  min-height: 14px;
+}
+.col-bar {
+  width: 100%;
+  max-width: 34px;
+  border-radius: 4px 4px 0 0;
+  background: var(--accent);
+}
+.col-empty .col-bar {
+  background: var(--line);
+}
+.col-l {
+  font: 500 11px var(--font-mono);
+  color: var(--muted);
+}
+.dayrow {
+  width: 100%;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  min-height: 52px;
+  padding: 6px 2px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.dayname {
+  font-weight: 600;
+}
+.dayrow .pill {
+  justify-self: end;
+  white-space: nowrap;
+}
+.daylbl {
+  display: grid;
+  justify-items: center;
+  min-width: 44px;
+  padding: 4px 6px;
+  border-radius: 8px;
+  background: var(--surface-2);
+  line-height: 1.1;
+}
+.daylbl b {
+  font: 700 15px var(--font-body);
+}
+.daylbl i {
+  font: 500 11px var(--font-mono);
+  font-style: normal;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+.daymain {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  text-align: left;
+}
+
+.signout {
+  background: none;
+  border: 1px solid var(--line, #d5e3d9);
+  border-radius: 999px;
+  padding: 6px 12px;
+  color: var(--accent);
+  font: 600 13px var(--font-body);
+  cursor: pointer;
 }

@@ -28,6 +28,7 @@
         <div class="titlebar">
           <h1 id="appTitle">Central de Gestão</h1>
           <p class="summary" id="summary">Carregando…</p>
+          <button type="button" class="signout" id="signOut" hidden>Sair da conta</button>
         </div>
         <nav class="modules" id="modules" aria-label="Telas do app" hidden></nav>
         <div class="hdr" id="hdrTi">
@@ -71,6 +72,7 @@
         <div class="hdr" id="hdrQ" hidden>
           <nav class="tabs" id="tabsQ" aria-label="Seções de quebras">
             <button type="button" class="tab" data-qtab="registros" aria-current="page">Registros</button>
+            <button type="button" class="tab" data-qtab="datas">Por data</button>
             <button type="button" class="tab" data-qtab="resumo">Resumo</button>
           </nav>
           <div class="tools tools2" id="toolsQ" hidden>
@@ -94,7 +96,11 @@
                 autocomplete="off"
               />
             </div>
-            <select id="qMonth" aria-label="Filtrar por mês"></select>
+          </div>
+          <div class="chips" id="qPeriod" role="group" aria-label="Período" hidden></div>
+          <div class="range" id="qRange" hidden>
+            <div class="field"><label for="qFrom">De</label><input id="qFrom" type="date" /></div>
+            <div class="field"><label for="qTo">Até</label><input id="qTo" type="date" /></div>
           </div>
           <div class="chips" id="qGroups" role="group" aria-label="Filtrar por grupo" hidden></div>
         </div>
@@ -118,11 +124,12 @@
             <ul class="list" id="qList"></ul>
             <div class="empty" id="qEmpty" hidden></div>
           </div>
+          <div id="qViewDays" hidden></div>
           <div id="qViewSum" hidden></div>
         </div>
         <div id="modAccess" hidden></div>
         <p class="foot">
-          <span id="foot"></span><button type="button" class="link" id="signOut" hidden>Sair</button>
+          <span id="foot"></span>
         </p>
       </main>
 

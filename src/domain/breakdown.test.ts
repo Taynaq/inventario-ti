@@ -4,8 +4,12 @@ import {
   createBreakdown,
   filterBreakdowns,
   groupsOf,
-  monthLabel,
-  monthsOf,
+  addDays,
+  dailySeries,
+  periodKpis,
+  periodRange,
+  rangeLabel,
+  summarizeDays,
   readBreakdown,
   summarizeBreakdowns,
   toBreakdown,
@@ -79,7 +83,14 @@ describe('filtros e resumo', () => {
   it('filtra por grupo sem diferenciar maiúsculas e por mês', () => {
     const g1 = filterBreakdowns(sample, { ...EMPTY_BREAKDOWN_FILTERS, group: 'G1' });
     expect(g1).toHaveLength(3);
-    expect(filterBreakdowns(sample, { ...EMPTY_BREAKDOWN_FILTERS, month: '2026-09' })).toHaveLength(1);
+    expect(
+      filterBreakdowns(sample, {
+        ...EMPTY_BREAKDOWN_FILTERS,
+        period: 'custom',
+        from: '2026-09-01',
+        to: '2026-09-30',
+      }),
+    ).toHaveLength(1);
     expect(filterBreakdowns(sample, { ...EMPTY_BREAKDOWN_FILTERS, query: 'overlock' })).toHaveLength(1);
   });
 
@@ -89,8 +100,6 @@ describe('filtros e resumo', () => {
   });
 
   it('lista meses e grupos sem repetir', () => {
-    expect(monthsOf(sample)).toEqual(['2026-10', '2026-09']);
-    expect(monthLabel('2026-10')).toBe('Outubro de 2026');
     expect(groupsOf(sample)).toEqual(['G1', 'G5']);
   });
 
@@ -103,5 +112,52 @@ describe('filtros e resumo', () => {
     expect(s.breaksByMachine[0]).toMatchObject({ n: 3 });
     expect(s.byGroup.map((g) => g.n)).toEqual([49, 22]);
     expect(s.byDay[0]).toMatchObject({ key: '2026-10-19', label: '19/10', n: 66 });
+  });
+
+  it('transforma o período escolhido em datas', () => {
+    const today = new Date(2026, 9, 22); // 22/10/2026
+    const f = EMPTY_BREAKDOWN_FILTERS;
+    expect(periodRange({ ...f, period: 'all' }, today)).toEqual({ from: '', to: '' });
+    expect(periodRange({ ...f, period: 'today' }, today)).toEqual({ from: '2026-10-22', to: '2026-10-22' });
+    expect(periodRange({ ...f, period: '7d' }, today)).toEqual({ from: '2026-10-16', to: '2026-10-22' });
+    expect(periodRange({ ...f, period: '30d' }, today)).toEqual({ from: '2026-09-23', to: '2026-10-22' });
+    expect(periodRange({ ...f, period: 'month' }, today)).toEqual({ from: '2026-10-01', to: '2026-10-31' });
+    expect(periodRange({ ...f, period: 'lastmonth' }, today)).toEqual({
+      from: '2026-09-01',
+      to: '2026-09-30',
+    });
+    expect(addDays('2026-10-31', 1)).toBe('2026-11-01');
+    expect(rangeLabel({ from: '2026-10-16', to: '2026-10-22' })).toBe('16/10/2026 a 22/10/2026');
+  });
+
+  it('filtra por período e agrupa por dia', () => {
+    const today = new Date(2026, 9, 20);
+    expect(filterBreakdowns(sample, { ...EMPTY_BREAKDOWN_FILTERS, period: '7d' }, today)).toHaveLength(3);
+    const days = summarizeDays(sample);
+    expect(days.map((d) => d.day)).toEqual(['2026-10-19', '2026-09-30']);
+    expect(days[0]).toMatchObject({ breaks: 3, lostParts: 66, machines: ['RETA'] });
+    expect(periodKpis(sample)).toEqual({ breaks: 4, machines: 2, lostParts: 71, daysWithBreaks: 2 });
+  });
+
+  it('monta a série diária preenchendo dias sem quebra', () => {
+    const days = summarizeDays(sample);
+    const { points } = dailySeries(days, { from: '2026-10-17', to: '2026-10-20' });
+    expect(points.map((p) => [p.day, p.breaks])).toEqual([
+      ['2026-10-17', 0],
+      ['2026-10-18', 0],
+      ['2026-10-19', 3],
+      ['2026-10-20', 0],
+    ]);
+    // sem período: de 30/09 a 19/10 são 20 dias, todos aparecem (os sem quebra com zero)
+    const all = dailySeries(days, { from: '', to: '' }).points;
+    expect(all).toHaveLength(20);
+    expect(all[0]).toMatchObject({ day: '2026-09-30', breaks: 1 });
+    // mais de 31 dias: só os dias com quebra
+    const far = summarizeDays([...sample, make('2026-05-01', 'RETA', 'G1', 1, 9)]);
+    expect(dailySeries(far, { from: '', to: '' }).points.map((p) => p.day)).toEqual([
+      '2026-05-01',
+      '2026-09-30',
+      '2026-10-19',
+    ]);
   });
 });

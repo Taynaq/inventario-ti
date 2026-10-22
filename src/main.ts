@@ -22,6 +22,7 @@ async function main(): Promise<void> {
   let breakdowns: BreakdownStore;
   let modules: readonly ModuleId[] = MODULE_IDS;
   let access: AccessApi | null = null;
+  let onSignOut: (() => void) | null = null;
   let options: ConstructorParameters<typeof InventoryView>[1] = {};
 
   if (!db) {
@@ -35,7 +36,8 @@ async function main(): Promise<void> {
     const api = new AccessApi(db, account.toLowerCase());
     modules = await api.myModules();
     if (await api.isAdmin()) access = api;
-    options = { account, onSignOut: () => void signOut(db) };
+    options = { account };
+    onSignOut = () => void signOut(db);
   }
 
   const inventory = new InventoryView(store, options);
@@ -45,6 +47,13 @@ async function main(): Promise<void> {
   if (modules.includes('quebras')) quebras.mount();
   const screens: Record<ModuleId, Screen> = { inventario: inventory, quebras };
   new Shell(screens, modules, access, setSummary).mount();
+  if (onSignOut) {
+    const out = document.getElementById('signOut');
+    if (out) {
+      out.hidden = false;
+      out.addEventListener('click', onSignOut);
+    }
+  }
 }
 
 void main();
