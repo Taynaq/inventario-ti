@@ -1,4 +1,4 @@
--- Ativos TI: estrutura do banco no Supabase (Postgres).
+-- Central de Gestão: estrutura do banco no Supabase (Postgres).
 --
 -- Como usar: Supabase > SQL Editor > New query > cole este arquivo inteiro > Run.
 -- Pode rodar de novo sem problema (tudo é "se não existir" ou "substituir").
@@ -32,6 +32,66 @@ $$;
 
 revoke all on function public.is_member() from public;
 grant execute on function public.is_member() to authenticated;
+
+-- ------------------------------------------- administradores e telas liberadas
+-- Quem é administrador vê todas as telas e a aba "Acessos", onde libera pessoas.
+-- Cada pessoa liberada tem a lista de telas que pode usar (coluna modules).
+alter table public.allowed_emails add column if not exists is_admin boolean not null default false;
+alter table public.allowed_emails add column if not exists added_at timestamptz not null default now();
+alter table public.allowed_emails add column if not exists modules text[] not null default '{inventario}';
+
+create or replace function public.is_admin()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1 from public.allowed_emails
+    where email = lower(coalesce(auth.jwt() ->> 'email', '')) and is_admin
+  );
+$$;
+
+revoke all on function public.is_admin() from public;
+grant execute on function public.is_admin() to authenticated;
+
+-- A pessoa pode usar a tela se for administradora ou se a tela estiver na lista dela.
+create or replace function public.has_module(m text)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1 from public.allowed_emails
+    where email = lower(coalesce(auth.jwt() ->> 'email', ''))
+      and (is_admin or m = any (modules))
+  );
+$$;
+
+revoke all on function public.has_module(text) from public;
+grant execute on function public.has_module(text) to authenticated;
+
+-- Telas que a pessoa que está logada pode usar (o app usa isto para montar o menu).
+create or replace function public.my_modules()
+returns text[]
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select coalesce(
+    (select case when is_admin then array['inventario','quebras'] else modules end
+       from public.allowed_emails
+      where email = lower(coalesce(auth.jwt() ->> 'email', ''))),
+    '{}'::text[]
+  );
+$$;
+
+revoke all on function public.my_modules() from public;
+grant execute on function public.my_modules() to authenticated;
 
 -- ----------------------------------------------------------- equipamentos
 create table if not exists public.equipamentos (
@@ -80,19 +140,19 @@ alter table public.equipamentos enable row level security;
 
 drop policy if exists "membros leem" on public.equipamentos;
 create policy "membros leem" on public.equipamentos
-  for select to authenticated using (public.is_member());
+  for select to authenticated using (public.has_module('inventario'));
 
 drop policy if exists "membros criam" on public.equipamentos;
 create policy "membros criam" on public.equipamentos
-  for insert to authenticated with check (public.is_member());
+  for insert to authenticated with check (public.has_module('inventario'));
 
 drop policy if exists "membros alteram" on public.equipamentos;
 create policy "membros alteram" on public.equipamentos
-  for update to authenticated using (public.is_member()) with check (public.is_member());
+  for update to authenticated using (public.has_module('inventario')) with check (public.has_module('inventario'));
 
 drop policy if exists "membros excluem" on public.equipamentos;
 create policy "membros excluem" on public.equipamentos
-  for delete to authenticated using (public.is_member());
+  for delete to authenticated using (public.has_module('inventario'));
 
 -- ------------------------------------------------------------ tempo real
 -- Mudanças feitas por uma pessoa aparecem na tela das outras sem recarregar.
@@ -110,29 +170,8 @@ end $$;
 -- Troque pelo seu e-mail (em minúsculas) e rode. Depois, para liberar mais pessoas,
 -- basta adicionar linhas na tabela allowed_emails pelo painel (Table Editor).
 --
--- insert into public.allowed_emails (email) values ('voce@suaempresa.com.br')
---   on conflict do nothing;
-
--- ---------------------------------------------------- administradores do app
--- Quem é administrador vê a aba "Acessos" no app e libera ou remove e-mails sem mexer no Supabase.
-alter table public.allowed_emails add column if not exists is_admin boolean not null default false;
-alter table public.allowed_emails add column if not exists added_at timestamptz not null default now();
-
-create or replace function public.is_admin()
-returns boolean
-language sql
-stable
-security definer
-set search_path = public
-as $$
-  select exists (
-    select 1 from public.allowed_emails
-    where email = lower(coalesce(auth.jwt() ->> 'email', '')) and is_admin
-  );
-$$;
-
-revoke all on function public.is_admin() from public;
-grant execute on function public.is_admin() to authenticated;
+-- insert into public.allowed_emails (email, is_admin) values ('voce@suaempresa.com.br', true)
+--   on conflict (email) do update set is_admin = true;
 
 drop policy if exists "admin lê acessos" on public.allowed_emails;
 create policy "admin lê acessos" on public.allowed_emails
@@ -151,3 +190,64 @@ drop policy if exists "admin remove acessos" on public.allowed_emails;
 create policy "admin remove acessos" on public.allowed_emails
   for delete to authenticated
   using (public.is_admin() and email <> lower(coalesce(auth.jwt() ->> 'email', '')));
+
+-- ----------------------------------------------------- quebra de máquinas
+create table if not exists public.quebras (
+  id          uuid primary key default gen_random_uuid(),
+  day         date not null,
+  machine     text not null check (char_length(btrim(machine)) > 0),
+  grp         text not null default '',
+  lost_parts  integer not null default 0 check (lost_parts >= 0),
+  notes       text not null default '',
+  created_at  timestamptz not null default now(),
+  updated_at  timestamptz not null default now(),
+  updated_by  uuid references auth.users (id) on delete set null
+);
+
+create index if not exists quebras_day_idx on public.quebras (day desc);
+
+create or replace function public.quebras_touch()
+returns trigger
+language plpgsql
+as $$
+begin
+  new.updated_at := now();
+  new.updated_by := auth.uid();
+  return new;
+end;
+$$;
+
+drop trigger if exists quebras_touch on public.quebras;
+create trigger quebras_touch
+  before insert or update on public.quebras
+  for each row execute function public.quebras_touch();
+
+alter table public.quebras enable row level security;
+
+drop policy if exists "quebras leem" on public.quebras;
+create policy "quebras leem" on public.quebras
+  for select to authenticated using (public.has_module('quebras'));
+
+drop policy if exists "quebras criam" on public.quebras;
+create policy "quebras criam" on public.quebras
+  for insert to authenticated with check (public.has_module('quebras'));
+
+drop policy if exists "quebras alteram" on public.quebras;
+create policy "quebras alteram" on public.quebras
+  for update to authenticated
+  using (public.has_module('quebras')) with check (public.has_module('quebras'));
+
+drop policy if exists "quebras excluem" on public.quebras;
+create policy "quebras excluem" on public.quebras
+  for delete to authenticated using (public.has_module('quebras'));
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'quebras'
+  ) then
+    alter publication supabase_realtime add table public.quebras;
+  end if;
+end;
+$$;

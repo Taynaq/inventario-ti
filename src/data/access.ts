@@ -1,9 +1,17 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { MODULE_IDS, isModuleId, type ModuleId } from '../modules';
 
 export interface AccessEntry {
   email: string;
   isAdmin: boolean;
+  /** Telas que a pessoa pode usar (administradores usam todas). */
+  modules: ModuleId[];
 }
+
+/** Lê a lista de telas vinda do banco, ignorando nomes desconhecidos. */
+export const parseModules = (raw: unknown): ModuleId[] => (Array.isArray(raw) ? raw.filter(isModuleId) : []);
+
+export const ALL_MODULES: readonly ModuleId[] = MODULE_IDS;
 
 export const normalizeEmail = (email: string): string => email.trim().toLowerCase();
 
@@ -32,19 +40,41 @@ export class AccessApi {
     return !error && data === true;
   }
 
+  /**
+   * Telas que a pessoa que está logada pode usar. Se o SQL novo ainda não foi rodado,
+   * devolve só o inventário, que era a única tela antes.
+   */
+  async myModules(): Promise<ModuleId[]> {
+    const { data, error } = await this.db.rpc('my_modules');
+    if (error) return ['inventario'];
+    return parseModules(data);
+  }
+
   async list(): Promise<AccessEntry[]> {
     const { data, error } = await this.db
       .from('allowed_emails')
-      .select('email, is_admin')
+      .select('email, is_admin, modules')
       .order('email', { ascending: true });
     if (error) throw error;
-    return (data ?? []).map((r) => ({ email: String(r.email), isAdmin: r.is_admin === true }));
+    return (data ?? []).map((r) => ({
+      email: String(r.email),
+      isAdmin: r.is_admin === true,
+      modules: parseModules(r.modules),
+    }));
   }
 
-  async add(email: string, isAdmin: boolean): Promise<void> {
+  async add(email: string, isAdmin: boolean, modules: readonly ModuleId[]): Promise<void> {
     const { error } = await this.db
       .from('allowed_emails')
-      .insert({ email: normalizeEmail(email), is_admin: isAdmin });
+      .insert({ email: normalizeEmail(email), is_admin: isAdmin, modules: [...modules] });
+    if (error) throw error;
+  }
+
+  async setModules(email: string, modules: readonly ModuleId[]): Promise<void> {
+    const { error } = await this.db
+      .from('allowed_emails')
+      .update({ modules: [...modules] })
+      .eq('email', email);
     if (error) throw error;
   }
 

@@ -1,6 +1,6 @@
 {
-  "name": "Ativos TI",
-  "short_name": "Ativos TI",
+  "name": "Central de Gestão",
+  "short_name": "Central",
   "description": "Controle dos equipamentos de TI da empresa.",
   "lang": "pt-BR",
   "start_url": "./",

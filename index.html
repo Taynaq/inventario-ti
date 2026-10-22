@@ -6,9 +6,9 @@
     <meta name="theme-color" content="#1F7A4A" />
     <meta
       name="description"
-      content="Controle dos equipamentos de TI da empresa: cadastro, responsável, patrimônio, status e garantia."
+      content="Central de Gestão: inventário de TI, quebra de máquinas e outros controles dos setores da empresa."
     />
-    <title>Ativos TI</title>
+    <title>Central de Gestão</title>
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="icon" href="icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="icon-192.png" />
@@ -26,60 +26,101 @@
     <div class="app" id="app" hidden>
       <header class="top">
         <div class="titlebar">
-          <h1>Ativos TI</h1>
+          <h1 id="appTitle">Central de Gestão</h1>
           <p class="summary" id="summary">Carregando…</p>
         </div>
-        <nav class="tabs" id="tabs" aria-label="Seções do app">
-          <button type="button" class="tab" data-tab="lista" aria-current="page">Lista</button>
-          <button type="button" class="tab" data-tab="painel">Painel</button>
-          <button type="button" class="tab" data-tab="importar">Importar</button>
-          <button type="button" class="tab" data-tab="acessos" hidden>Acessos</button>
-        </nav>
-        <div class="tools" id="tools" hidden>
-          <div class="search">
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="1.8"
-              stroke-linecap="round"
-              aria-hidden="true"
-            >
-              <circle cx="11" cy="11" r="6.5" />
-              <path d="M16 16l4.5 4.5" />
-            </svg>
-            <input
-              id="q"
-              type="search"
-              placeholder="Buscar nome, série, responsável"
-              aria-label="Buscar equipamento"
-              autocomplete="off"
-            />
+        <nav class="modules" id="modules" aria-label="Telas do app" hidden></nav>
+        <div class="hdr" id="hdrTi">
+          <nav class="tabs" id="tabs" aria-label="Seções do app">
+            <button type="button" class="tab" data-tab="lista" aria-current="page">Lista</button>
+            <button type="button" class="tab" data-tab="painel">Painel</button>
+            <button type="button" class="tab" data-tab="importar">Importar</button>
+          </nav>
+          <div class="tools" id="tools" hidden>
+            <div class="search">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.8"
+                stroke-linecap="round"
+                aria-hidden="true"
+              >
+                <circle cx="11" cy="11" r="6.5" />
+                <path d="M16 16l4.5 4.5" />
+              </svg>
+              <input
+                id="q"
+                type="search"
+                placeholder="Buscar nome, série, responsável"
+                aria-label="Buscar equipamento"
+                autocomplete="off"
+              />
+            </div>
+            <select id="catFilter" aria-label="Filtrar por categoria" hidden></select>
           </div>
-          <select id="catFilter" aria-label="Filtrar por categoria" hidden></select>
+          <div
+            class="chips"
+            id="catChips"
+            role="group"
+            aria-label="Filtrar por tipo de equipamento"
+            hidden
+          ></div>
+          <div class="chips" id="chips" role="group" aria-label="Filtrar por status" hidden></div>
         </div>
-        <div
-          class="chips"
-          id="catChips"
-          role="group"
-          aria-label="Filtrar por tipo de equipamento"
-          hidden
-        ></div>
-        <div class="chips" id="chips" role="group" aria-label="Filtrar por status" hidden></div>
+        <div class="hdr" id="hdrQ" hidden>
+          <nav class="tabs" id="tabsQ" aria-label="Seções de quebras">
+            <button type="button" class="tab" data-qtab="registros" aria-current="page">Registros</button>
+            <button type="button" class="tab" data-qtab="resumo">Resumo</button>
+          </nav>
+          <div class="tools tools2" id="toolsQ" hidden>
+            <div class="search">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.8"
+                stroke-linecap="round"
+                aria-hidden="true"
+              >
+                <circle cx="11" cy="11" r="6.5" />
+                <path d="M16 16l4.5 4.5" />
+              </svg>
+              <input
+                id="qSearch"
+                type="search"
+                placeholder="Buscar máquina"
+                aria-label="Buscar registro"
+                autocomplete="off"
+              />
+            </div>
+            <select id="qMonth" aria-label="Filtrar por mês"></select>
+          </div>
+          <div class="chips" id="qGroups" role="group" aria-label="Filtrar por grupo" hidden></div>
+        </div>
       </header>
 
       <main>
-        <div id="viewList">
-          <div class="note" id="note" hidden>
-            <span>Há equipamentos de exemplo salvos neste app.</span>
-            <button type="button" class="link" data-act="rm-examples">Remover exemplos</button>
+        <div id="modTi">
+          <div id="viewList">
+            <div class="note" id="note" hidden>
+              <span>Há equipamentos de exemplo salvos neste app.</span>
+              <button type="button" class="link" data-act="rm-examples">Remover exemplos</button>
+            </div>
+            <ul class="list" id="list"></ul>
+            <div class="empty" id="empty" hidden></div>
           </div>
-          <ul class="list" id="list"></ul>
-          <div class="empty" id="empty" hidden></div>
+          <div id="viewDash" hidden></div>
+          <div id="viewImport" hidden></div>
         </div>
-        <div id="viewDash" hidden></div>
-        <div id="viewImport" hidden></div>
-        <div id="viewAccess" hidden></div>
+        <div id="modQ" hidden>
+          <div id="qViewList">
+            <ul class="list" id="qList"></ul>
+            <div class="empty" id="qEmpty" hidden></div>
+          </div>
+          <div id="qViewSum" hidden></div>
+        </div>
+        <div id="modAccess" hidden></div>
         <p class="foot">
           <span id="foot"></span><button type="button" class="link" id="signOut" hidden>Sair</button>
         </p>
@@ -97,6 +138,19 @@
           <path d="M12 5v14M5 12h14" />
         </svg>
         Novo equipamento
+      </button>
+      <button class="fab" id="addQ" type="button" hidden>
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          aria-hidden="true"
+        >
+          <path d="M12 5v14M5 12h14" />
+        </svg>
+        Novo registro
       </button>
     </div>
 
@@ -195,6 +249,65 @@
       <div class="sheet-foot">
         <button type="button" class="btn" data-close>Cancelar</button>
         <button type="submit" class="btn primary" id="saveBtn">Salvar</button>
+      </div>
+    </form>
+
+    <form
+      class="sheet"
+      id="sheetQ"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="qTitle"
+      novalidate
+      autocomplete="off"
+      hidden
+    >
+      <div class="sheet-head">
+        <div class="dh"><h2 id="qTitle">Novo registro</h2></div>
+        <button type="button" class="icon-btn" data-close aria-label="Fechar">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            aria-hidden="true"
+          >
+            <path d="M6 6l12 12M18 6L6 18" />
+          </svg>
+        </button>
+      </div>
+      <div class="sheet-body">
+        <div class="field">
+          <label for="q-day">Dia</label>
+          <input id="q-day" type="date" />
+        </div>
+        <div class="field">
+          <label for="q-machine">Máquina <span class="req">(obrigatório)</span></label>
+          <input id="q-machine" type="text" list="dl-machines" placeholder="Ex.: RETA" />
+          <datalist id="dl-machines"></datalist>
+        </div>
+        <div class="two">
+          <div class="field">
+            <label for="q-group">Grupo</label>
+            <input id="q-group" type="text" list="dl-groups" placeholder="Ex.: G1" />
+            <datalist id="dl-groups"></datalist>
+          </div>
+          <div class="field">
+            <label for="q-parts">Peças perdidas</label>
+            <input id="q-parts" type="text" inputmode="numeric" placeholder="Ex.: 22" />
+          </div>
+        </div>
+        <div class="field">
+          <label for="q-notes">Observações</label>
+          <textarea id="q-notes" placeholder="O que aconteceu, quem avisou, o que foi trocado."></textarea>
+        </div>
+        <p class="err" id="qErr" role="alert"></p>
+      </div>
+      <div class="sheet-foot">
+        <button type="button" class="btn danger" id="qDel" hidden>Excluir</button>
+        <button type="button" class="btn" data-close>Cancelar</button>
+        <button type="submit" class="btn primary" id="qSave">Salvar</button>
       </div>
     </form>
 

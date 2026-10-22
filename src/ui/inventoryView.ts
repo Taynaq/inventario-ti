@@ -16,22 +16,18 @@ import { $, esc, toast } from './dom';
 import { DashboardView } from './dashboardView';
 import { categoryIcon } from './icons';
 import { ImportView } from './importView';
-import { AccessView } from './accessView';
-import type { AccessApi } from '../data/access';
 
 export interface ViewOptions {
   /** E-mail de quem está usando (modo compartilhado). */
   account?: string;
   /** Presente no modo compartilhado: mostra o botão "Sair". */
   onSignOut?: () => void;
-  /** Presente no modo compartilhado: permite à pessoa administradora liberar e-mails. */
-  access?: AccessApi;
 }
 
 const option = (value: string, label: string): string =>
   `<option value="${esc(value)}">${esc(label)}</option>`;
 
-type Tab = 'lista' | 'painel' | 'importar' | 'acessos';
+type Tab = 'lista' | 'painel' | 'importar';
 
 export class InventoryView {
   private items: Equipment[] = [];
@@ -46,7 +42,8 @@ export class InventoryView {
   private tab: Tab = 'lista';
   private dash!: DashboardView;
   private importer!: ImportView;
-  private accessView: AccessView | null = null;
+  /** Falso quando outra tela do app está aberta. */
+  private active = true;
 
   constructor(
     private readonly store: Store,
@@ -75,14 +72,6 @@ export class InventoryView {
       () => this.items,
       () => this.setTab('lista'),
     );
-    const access = this.opts.access;
-    if (access) {
-      void access.isAdmin().then((ok) => {
-        if (!ok) return;
-        this.accessView = new AccessView($('#viewAccess'), access);
-        document.querySelector<HTMLElement>('[data-tab="acessos"]')!.hidden = false;
-      });
-    }
     this.bind();
     this.render();
     this.store.subscribe(
@@ -148,7 +137,7 @@ export class InventoryView {
     });
     $('#tabs').addEventListener('click', (e) => {
       const tab = (e.target as Element).closest<HTMLElement>('[data-tab]')?.dataset.tab;
-      if (tab === 'lista' || tab === 'painel' || tab === 'importar' || tab === 'acessos') this.setTab(tab);
+      if (tab === 'lista' || tab === 'painel' || tab === 'importar') this.setTab(tab);
     });
     $('#addBtn').addEventListener('click', () => this.openForm(null));
     $('#scrim').addEventListener('click', () => this.closeSheets());
@@ -167,6 +156,15 @@ export class InventoryView {
     });
   }
 
+  /** Mostra ou esconde a tela do inventário (o menu do topo troca entre as telas). */
+  setActive(active: boolean): void {
+    this.active = active;
+    $('#hdrTi').hidden = !active;
+    $('#modTi').hidden = !active;
+    $('#addBtn').hidden = !active || this.tab === 'importar';
+    if (active) this.render();
+  }
+
   private setTab(tab: Tab): void {
     this.tab = tab;
     document.querySelectorAll<HTMLElement>('[data-tab]').forEach((b) => {
@@ -176,9 +174,7 @@ export class InventoryView {
     $('#viewList').hidden = tab !== 'lista';
     $('#viewDash').hidden = tab !== 'painel';
     $('#viewImport').hidden = tab !== 'importar';
-    $('#viewAccess').hidden = tab !== 'acessos';
-    $('#addBtn').hidden = tab === 'importar' || tab === 'acessos';
-    if (tab === 'acessos') void this.accessView?.refresh();
+    $('#addBtn').hidden = !this.active || tab === 'importar';
     this.render();
     window.scrollTo(0, 0);
   }
@@ -213,12 +209,14 @@ export class InventoryView {
     const s = summarize(this.items);
     if (this.filters.status === 'garantia' && s.warranty === 0) this.filters.status = 'all';
 
-    $('#summary').textContent = !this.ready
-      ? 'Carregando…'
-      : s.total === 0
-        ? 'Nenhum equipamento ainda'
-        : `${s.total} ${s.total === 1 ? 'equipamento' : 'equipamentos'}` +
-          (s.assetValue > 0 ? ` · ${formatMoneyShort(s.assetValue)} em ativos` : '');
+    if (this.active) {
+      $('#summary').textContent = !this.ready
+        ? 'Carregando…'
+        : s.total === 0
+          ? 'Nenhum equipamento ainda'
+          : `${s.total} ${s.total === 1 ? 'equipamento' : 'equipamentos'}` +
+            (s.assetValue > 0 ? ` · ${formatMoneyShort(s.assetValue)} em ativos` : '');
+    }
 
     const show = this.ready && s.total > 0 && this.tab === 'lista';
     $('#tools').hidden = !show;
@@ -323,7 +321,7 @@ export class InventoryView {
       else if (this.store.kind === 'cloud') {
         text = `Dados compartilhados com a equipe${this.opts.account ? ` · ${this.opts.account}` : ''}.`;
       } else {
-        text = 'Dados salvos só neste navegador. Limpar os dados do navegador apaga o inventário.';
+        text = 'Dados salvos só neste navegador. Limpar os dados do navegador apaga os registros.';
       }
     }
     $('#foot').textContent = text;
@@ -341,8 +339,7 @@ export class InventoryView {
 
   private closeSheets(): void {
     if ($('#scrim').hidden) return;
-    $('#sheetForm').hidden = true;
-    $('#sheetDetail').hidden = true;
+    document.querySelectorAll<HTMLElement>('.sheet').forEach((sheet) => (sheet.hidden = true));
     $('#scrim').hidden = true;
     $('#app').inert = false;
     document.documentElement.classList.remove('locked');

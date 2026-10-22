@@ -1,4 +1,4 @@
-# Ativos TI
+# Central de Gestão
 
 Aplicativo web para celular que controla os equipamentos de TI da empresa: notebooks, celulares, monitores, impressoras, rede e o que mais você tiver. Cada equipamento tem responsável, local, número de série, patrimônio, status, data de compra, garantia e valor. O app avisa quando uma garantia está vencida ou perto de vencer.
 
@@ -13,9 +13,15 @@ Gratuito e de código aberto (licença MIT). Funciona no navegador do celular e 
 
 O modo é escolhido pelas variáveis de ambiente. Sem elas, o app roda em modo local.
 
-## Acessos (modo compartilhado)
+## Telas do app
 
-Administradores veem a aba **Acessos**, onde liberam e removem os e-mails que podem usar o app. A pessoa liberada cria a própria conta (e a própria senha) na tela de login. Para ativar, rode `supabase/acessos.sql` no Supabase (veja o `GUIA-BANCO-DE-DADOS.md`).
+A **Central de Gestão** reúne várias telas, e cada pessoa vê só as que o administrador liberou:
+
+- **Inventário de TI:** equipamentos, painel e importação de PDF/CSV.
+- **Quebra de máquinas:** registro de dia, máquina, grupo e peças perdidas, com filtro por mês e grupo e resumo por máquina, grupo e dia.
+- **Acessos** (só administradores): libera e remove e-mails e escolhe as telas de cada pessoa. A pessoa liberada cria a própria conta e a própria senha na tela de login.
+
+Para acrescentar uma tela nova, cadastre-a em `src/modules.ts` e em `supabase/schema.sql` (função `my_modules` e as regras da tabela). Veja o `GUIA-BANCO-DE-DADOS.md`.
 
 ## Painel e importação
 

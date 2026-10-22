@@ -1,4 +1,4 @@
-# Ativos TI: ligar o banco de dados e o login (passo a passo)
+# Central de Gestão: ligar o banco de dados e o login (passo a passo)
 
 Faça isto uma vez. Depois disso, todos os colaboradores veem os mesmos equipamentos e entram com e-mail e senha.
 
@@ -12,22 +12,22 @@ Faça isto uma vez. Depois disso, todos os colaboradores veem os mesmos equipame
 1. No menu da esquerda, clique em **SQL Editor** e depois em **New query**.
 2. Abra o arquivo `supabase/schema.sql` deste projeto, copie **tudo**, cole no Supabase e clique em **Run**. Deve aparecer "Success".
 
-## 3. Liberar quem pode entrar
+## 3. Tornar você administrador
 
-Só entra quem estiver nesta lista. No **SQL Editor**, cole e rode, trocando pelo seu e-mail (em minúsculas):
+No **SQL Editor**, em **New query**, cole e rode, trocando pelo seu e-mail (em minúsculas):
 
 ```
-insert into public.allowed_emails (email) values ('seu@email.com');
+insert into public.allowed_emails (email, is_admin) values ('seu@email.com', true)
+  on conflict (email) do update set is_admin = true;
 ```
 
-Para liberar outra pessoa, rode a mesma linha com o e-mail dela. Para tirar o acesso, vá em **Table Editor**, abra `allowed_emails` e apague a linha.
+Administrador acessa todas as telas e vê a aba **Acessos**.
 
-## 3b. Ativar a aba "Acessos" (para liberar pessoas dentro do app)
+## 3b. Liberar as outras pessoas (dentro do app)
 
-1. No **SQL Editor**, clique em **New query**.
-2. Abra o arquivo `supabase/acessos.sql`, copie tudo e cole.
-3. Na **última linha**, troque `seu@email.com` pelo seu e-mail (em minúsculas) e clique em **Run**.
-4. Depois disso, quando você entrar no app, aparece a aba **Acessos**. Nela você digita o e-mail de cada pessoa e toca em **Liberar acesso**. A pessoa abre o app, toca em **Criar conta** com aquele e-mail e escolhe a própria senha.
+Na aba **Acessos** do app, você digita o e-mail de cada pessoa, marca **quais telas ela pode usar** (Inventário de TI, Quebra de máquinas…) e toca em **Liberar acesso**. Depois, a pessoa abre o app, toca em **Criar conta** com aquele e-mail e escolhe a própria senha. Você pode mudar as telas de cada pessoa a qualquer momento.
+
+**Se você já tinha rodado o `schema.sql` antes:** rode de novo o arquivo inteiro. Ele é seguro de repetir e acrescenta as telas liberadas por pessoa e a tabela de quebras. As pessoas que já estavam liberadas continuam com acesso ao Inventário de TI.
 
 ## 4. Pegar as duas chaves
 

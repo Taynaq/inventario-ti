@@ -5,9 +5,18 @@ import {
   normalizeEmail,
   type AccessEntry,
 } from '../data/access';
+import { MODULES, isModuleId, type ModuleId } from '../modules';
 import { $, esc, toast } from './dom';
 
-/** Aba "Acessos": o administrador libera e remove os e-mails que podem usar o app. */
+const moduleChecks = (name: string, checked: readonly ModuleId[], extra = ''): string =>
+  MODULES.map(
+    (m) =>
+      `<label class="checkrow"><input type="checkbox" name="${name}" value="${m.id}"${
+        checked.includes(m.id) ? ' checked' : ''
+      }${extra} />${esc(m.label)}</label>`,
+  ).join('');
+
+/** Aba "Acessos": o administrador libera pessoas e escolhe quais telas cada uma pode usar. */
 export class AccessView {
   private entries: AccessEntry[] = [];
   private loaded = false;
@@ -28,6 +37,10 @@ export class AccessView {
       else if (el?.dataset.act === 'acc-admin') void this.toggleAdmin(email);
       else if (el?.dataset.act === 'acc-link') void this.copyLink();
     });
+    root.addEventListener('change', (e) => {
+      const t = e.target as HTMLInputElement;
+      if (t.dataset.rowmodule && t.dataset.email) void this.toggleModule(t.dataset.email, t.value, t.checked);
+    });
     this.render();
   }
 
@@ -47,37 +60,46 @@ export class AccessView {
     return `${location.origin}${location.pathname}`;
   }
 
-  private render(): void {
-    const rows = this.entries
-      .map((a) => {
-        const me = a.email === this.api.me;
-        return (
-          `<li class="acc-row"><div class="acc-who"><span class="acc-mail">${esc(a.email)}</span>` +
-          `<span class="sub">${me ? 'Você' : a.isAdmin ? 'Administrador' : 'Pode usar o app'}${me && a.isAdmin ? ' · Administrador' : ''}</span></div>` +
-          (me
-            ? ''
-            : `<div class="acc-btns"><button type="button" class="btn" data-act="acc-admin" data-email="${esc(a.email)}">` +
-              `${a.isAdmin ? 'Tirar admin' : 'Tornar admin'}</button>` +
-              `<button type="button" class="btn danger" data-act="acc-rm" data-email="${esc(a.email)}">Remover</button></div>`) +
-          `</li>`
-        );
-      })
-      .join('');
+  private rowHtml(a: AccessEntry): string {
+    const me = a.email === this.api.me;
+    const who = me ? 'Você' : a.isAdmin ? 'Administrador' : 'Telas liberadas';
+    const modules = a.isAdmin
+      ? '<p class="sub">Administrador: acessa todas as telas e esta aba de acessos.</p>'
+      : `<div class="acc-mods">${MODULES.map(
+          (m) =>
+            `<label class="checkrow"><input type="checkbox" data-rowmodule="1" data-email="${esc(a.email)}" value="${m.id}"${
+              a.modules.includes(m.id) ? ' checked' : ''
+            } />${esc(m.label)}</label>`,
+        ).join('')}</div>`;
+    return (
+      `<li class="acc-row"><div class="acc-who"><span class="acc-mail">${esc(a.email)}</span>` +
+      `<span class="sub">${who}${me && a.isAdmin ? ' · Administrador' : ''}</span></div>` +
+      modules +
+      (me
+        ? ''
+        : `<div class="acc-btns"><button type="button" class="btn" data-act="acc-admin" data-email="${esc(a.email)}">` +
+          `${a.isAdmin ? 'Tirar admin' : 'Tornar admin'}</button>` +
+          `<button type="button" class="btn danger" data-act="acc-rm" data-email="${esc(a.email)}">Remover</button></div>`) +
+      `</li>`
+    );
+  }
 
+  private render(): void {
     this.root.innerHTML =
       `<section class="imp-card"><h2>Liberar uma pessoa</h2>` +
-      `<p class="muted">Digite o e-mail da pessoa. Depois peça para ela abrir o app, tocar em <strong>Criar conta</strong> ` +
-      `com esse mesmo e-mail e escolher a própria senha.</p>` +
+      `<p class="muted">Digite o e-mail e marque as telas que ela pode usar. Depois peça para ela abrir o app, ` +
+      `tocar em <strong>Criar conta</strong> com esse mesmo e-mail e escolher a própria senha.</p>` +
       `<form id="acc-form" novalidate><div class="field"><label for="acc-email">E-mail da pessoa</label>` +
       `<input id="acc-email" type="email" inputmode="email" autocomplete="off" placeholder="nome@empresa.com.br" /></div>` +
-      `<label class="checkrow"><input id="acc-admin" type="checkbox" />Também pode liberar e remover pessoas (administrador)</label>` +
+      `<div class="field"><span class="lbl">Telas liberadas</span>${moduleChecks('acc-new', [])}</div>` +
+      `<label class="checkrow"><input id="acc-admin" type="checkbox" />Administrador (acessa todas as telas e libera pessoas)</label>` +
       `<p class="msg bad" id="acc-err" role="alert">${esc(this.error)}</p>` +
       `<button type="submit" class="btn primary">Liberar acesso</button></form></section>` +
       `<section class="imp-card"><h2>Quem tem acesso</h2>` +
       (this.loaded
         ? this.entries.length === 0
           ? '<p class="muted">Ninguém ainda.</p>'
-          : `<ul class="acc-list">${rows}</ul>`
+          : `<ul class="acc-list">${this.entries.map((a) => this.rowHtml(a)).join('')}</ul>`
         : '<p class="muted">Carregando…</p>') +
       `</section>` +
       `<section class="imp-card"><h2>Link do app</h2>` +
@@ -95,9 +117,13 @@ export class AccessView {
   private async add(): Promise<void> {
     const email = normalizeEmail($<HTMLInputElement>('#acc-email').value);
     const admin = $<HTMLInputElement>('#acc-admin').checked;
+    const modules = [...this.root.querySelectorAll<HTMLInputElement>('input[name="acc-new"]:checked')]
+      .map((i) => i.value)
+      .filter(isModuleId);
     if (!isValidEmail(email)) return this.setError('Digite um e-mail válido, como nome@empresa.com.br.');
+    if (!admin && modules.length === 0) return this.setError('Marque pelo menos uma tela para essa pessoa.');
     try {
-      await this.api.add(email, admin);
+      await this.api.add(email, admin, modules);
       toast(`${email} liberado`);
       this.error = '';
       await this.refresh();
@@ -106,8 +132,21 @@ export class AccessView {
     }
   }
 
+  private async toggleModule(email: string, id: string, on: boolean): Promise<void> {
+    if (!isModuleId(id)) return;
+    const current = this.entries.find((a) => a.email === email)?.modules ?? [];
+    const next = on ? [...new Set([...current, id])] : current.filter((m) => m !== id);
+    try {
+      await this.api.setModules(email, next);
+      toast('Telas atualizadas');
+    } catch (e) {
+      toast(accessErrorMessage(e));
+    }
+    await this.refresh();
+  }
+
   private async remove(email: string): Promise<void> {
-    if (!window.confirm(`Remover o acesso de ${email}? A pessoa deixa de ver os equipamentos.`)) return;
+    if (!window.confirm(`Remover o acesso de ${email}? A pessoa deixa de usar o app.`)) return;
     try {
       await this.api.remove(email);
       toast('Acesso removido');

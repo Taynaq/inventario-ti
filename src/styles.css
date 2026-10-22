@@ -997,7 +997,7 @@ button.legend-btn:disabled {
 }
 
 /* acessos */
-#viewAccess {
+#modAccess {
   display: grid;
   gap: 12px;
 }
@@ -1039,4 +1039,90 @@ button.legend-btn:disabled {
   font-family: var(--font-mono);
   font-size: 13px;
   overflow-wrap: anywhere;
+}
+
+/* menu de telas e cabeçalhos por tela */
+.hdr {
+  display: grid;
+  gap: 10px;
+}
+.modules {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  margin-inline: -16px;
+  padding-inline: 16px;
+}
+.modules::-webkit-scrollbar {
+  display: none;
+}
+.modules .tab {
+  flex: none;
+  min-height: 36px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink);
+  font: 600 13px var(--font-body);
+}
+.modules .tab[aria-current='page'] {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--on-accent);
+  box-shadow: none;
+}
+.tools2 {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+/* quebra de máquinas */
+.daytile {
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 0;
+  line-height: 1;
+}
+.daytile b {
+  font: 700 18px var(--font-display);
+  color: var(--ink);
+}
+.daytile i {
+  font: 600 10px var(--font-body);
+  font-style: normal;
+  letter-spacing: 0.06em;
+}
+.parts {
+  color: var(--ink);
+  font-weight: 500;
+}
+.tile-t {
+  font-size: 20px;
+  overflow-wrap: anywhere;
+}
+#modQ .list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+.acc-mods {
+  display: grid;
+  gap: 2px;
+}
+#qViewSum {
+  display: grid;
+  gap: 12px;
+}
+
+.tools2 select {
+  max-width: 175px;
+}
+@media (max-width: 420px) {
+  h1 {
+    font-size: 28px;
+  }
 }
