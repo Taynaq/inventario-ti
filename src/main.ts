@@ -9,13 +9,15 @@ import { MODULE_IDS, type ModuleId } from './modules';
 import { BreakdownView } from './ui/breakdownView';
 import { $ } from './ui/dom';
 import { requireMember, signOut } from './ui/auth';
+import { HomeView } from './ui/homeView';
 import { InventoryView } from './ui/inventoryView';
 import { Shell, type Screen } from './ui/shell';
 
 async function main(): Promise<void> {
   const db = createSupabase();
+  let shell: Shell | null = null;
   const setSummary = (text: string): void => {
-    $('#summary').textContent = text;
+    if (!shell?.isHome) $('#summary').textContent = text;
   };
 
   let store: Store;
@@ -37,6 +39,10 @@ async function main(): Promise<void> {
     modules = await api.myModules();
     if (await api.isAdmin()) access = api;
     options = { account };
+    const avatar = $('#avatar');
+    avatar.textContent = (account.trim()[0] ?? '?').toUpperCase();
+    avatar.title = account;
+    avatar.hidden = false;
     onSignOut = () => void signOut(db);
   }
 
@@ -46,7 +52,16 @@ async function main(): Promise<void> {
   if (modules.includes('inventario')) inventory.mount();
   if (modules.includes('quebras')) quebras.mount();
   const screens: Record<ModuleId, Screen> = { inventario: inventory, quebras };
-  new Shell(screens, modules, access, setSummary).mount();
+  const home = new HomeView($('#modHome'), {
+    modules,
+    admin: access !== null,
+    store: modules.includes('inventario') ? store : null,
+    breakdowns: modules.includes('quebras') ? breakdowns : null,
+    go: (section) => shell?.show(section),
+  });
+  home.mount();
+  shell = new Shell(screens, modules, access, setSummary, home);
+  shell.mount();
   if (onSignOut) {
     const out = document.getElementById('signOut');
     if (out) {

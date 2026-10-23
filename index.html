@@ -25,12 +25,19 @@
 
     <div class="app" id="app" hidden>
       <header class="top">
-        <div class="titlebar">
-          <h1 id="appTitle">Central de Gestão</h1>
-          <p class="summary" id="summary">Carregando…</p>
-          <button type="button" class="signout" id="signOut" hidden>Sair da conta</button>
+        <div class="topbar">
+          <span class="brand"
+            ><span class="mark" aria-hidden="true">◆</span><span id="appTitle">Central de Gestão</span></span
+          >
+          <span class="who">
+            <span class="av" id="avatar" hidden></span>
+            <button type="button" class="signout" id="signOut" hidden>Sair</button>
+          </span>
         </div>
-        <nav class="modules" id="modules" aria-label="Telas do app" hidden></nav>
+        <div class="pagehead">
+          <h1 id="pageTitle">Início</h1>
+          <p class="summary" id="summary">Carregando…</p>
+        </div>
         <div class="hdr" id="hdrTi">
           <nav class="tabs" id="tabs" aria-label="Seções do app">
             <button type="button" class="tab" data-tab="lista" aria-current="page">Lista</button>
@@ -107,6 +114,7 @@
       </header>
 
       <main>
+        <div id="modHome" hidden></div>
         <div id="modTi">
           <div id="viewList">
             <div class="note" id="note" hidden>
@@ -132,6 +140,7 @@
           <span id="foot"></span>
         </p>
       </main>
+      <nav class="bottomnav" id="modules" aria-label="Telas do app"></nav>
 
       <button class="fab" id="addBtn" type="button">
         <svg

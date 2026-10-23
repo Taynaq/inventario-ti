@@ -1246,3 +1246,244 @@ button.legend-btn:disabled {
   font: 600 13px var(--font-body);
   cursor: pointer;
 }
+
+/* ===== layout v12: barra no topo, menu embaixo, tela inicial ===== */
+.app {
+  padding-block: 0 calc(96px + env(safe-area-inset-bottom, 0px));
+}
+.top {
+  margin-inline: -16px;
+  padding: 10px 16px 12px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+  gap: 10px;
+}
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+  font-weight: 700;
+  font-size: 16px;
+}
+.brand #appTitle {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mark {
+  flex: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  background: var(--accent);
+  color: var(--on-accent);
+  display: grid;
+  place-items: center;
+  font-size: 14px;
+}
+.who {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.av {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--surface-2);
+  color: var(--accent);
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  font-size: 14px;
+}
+.pagehead {
+  display: grid;
+  gap: 2px;
+}
+h1 {
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 22px;
+  line-height: 1.2;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.summary::first-letter {
+  text-transform: uppercase;
+}
+.empty h2,
+.hero-n {
+  letter-spacing: 0;
+}
+.empty h2 {
+  font-family: var(--font-body);
+  text-transform: none;
+  font-size: 20px;
+}
+
+/* menu de baixo */
+.bottomnav {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 15;
+  display: flex;
+  max-width: 640px;
+  margin-inline: auto;
+  padding: 6px 6px calc(8px + env(safe-area-inset-bottom, 0px));
+  background: var(--surface);
+  border-top: 1px solid var(--line);
+}
+.bn {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  padding: 6px 2px;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font: 600 11.5px var(--font-body);
+  cursor: pointer;
+}
+.bn svg {
+  width: 24px;
+  height: 24px;
+}
+.bn span {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.bn[aria-current='page'] {
+  color: var(--accent);
+}
+.fab {
+  bottom: calc(80px + env(safe-area-inset-bottom, 0px));
+}
+.foot {
+  margin-top: 24px;
+}
+
+/* tela inicial */
+#modHome {
+  display: grid;
+  gap: 12px;
+  padding-top: 14px;
+}
+.lbl {
+  margin: 6px 0 0;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.kpis {
+  display: grid;
+  gap: 8px;
+}
+.kpis.k1 {
+  grid-template-columns: 1fr;
+}
+.kpis.k2 {
+  grid-template-columns: 1fr 1fr;
+}
+.kpis.k3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.kpi {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 10px 12px;
+  display: grid;
+  gap: 2px;
+}
+.kpi small {
+  font-size: 11.5px;
+  color: var(--muted);
+}
+.kpi strong {
+  font-size: 24px;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+.kpi.alert strong {
+  color: var(--warn);
+}
+.tiles-home {
+  display: grid;
+  gap: 10px;
+}
+.stile {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 14px;
+  text-align: left;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+}
+.stile:active {
+  background: var(--surface-2);
+}
+.sic {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: var(--surface-2);
+  color: var(--accent);
+  display: grid;
+  place-items: center;
+}
+.sic svg {
+  width: 24px;
+  height: 24px;
+}
+.stx {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+}
+.stx b {
+  font-size: 15.5px;
+}
+.stx small {
+  color: var(--muted);
+  font-size: 13px;
+}
+.chev {
+  color: var(--muted);
+  font-size: 24px;
+  line-height: 1;
+}
+
+/* o cabeçalho rola junto com a tela, para os filtros não ocuparem metade do celular */
+.top {
+  position: static;
+}
+.panel h2,
+.imp-card h2 {
+  font-family: var(--font-body);
+  font-size: 16px;
+  letter-spacing: 0;
+  text-transform: none;
+}
