@@ -111,6 +111,31 @@
           </div>
           <div class="chips" id="qGroups" role="group" aria-label="Filtrar por grupo" hidden></div>
         </div>
+        <div class="hdr" id="hdrS" hidden>
+          <div class="tools tools2">
+            <div class="search">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.8"
+                stroke-linecap="round"
+                aria-hidden="true"
+              >
+                <circle cx="11" cy="11" r="6.5" />
+                <path d="M16 16l4.5 4.5" />
+              </svg>
+              <input
+                id="sSearch"
+                type="search"
+                placeholder="Buscar nome, código, empresa"
+                aria-label="Buscar pedido"
+                autocomplete="off"
+              />
+            </div>
+          </div>
+          <div class="chips" id="sStatus" role="group" aria-label="Filtrar por situação" hidden></div>
+        </div>
       </header>
 
       <main>
@@ -134,6 +159,10 @@
           </div>
           <div id="qViewDays" hidden></div>
           <div id="qViewSum" hidden></div>
+        </div>
+        <div id="modS" hidden>
+          <ul class="list" id="sList"></ul>
+          <div class="empty" id="sEmpty" hidden></div>
         </div>
         <div id="modAccess" hidden></div>
         <p class="foot">
@@ -167,6 +196,19 @@
           <path d="M12 5v14M5 12h14" />
         </svg>
         Novo registro
+      </button>
+      <button class="fab" id="addS" type="button" hidden>
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          aria-hidden="true"
+        >
+          <path d="M12 5v14M5 12h14" />
+        </svg>
+        Novo pedido
       </button>
     </div>
 
@@ -324,6 +366,99 @@
         <button type="button" class="btn danger" id="qDel" hidden>Excluir</button>
         <button type="button" class="btn" data-close>Cancelar</button>
         <button type="submit" class="btn primary" id="qSave">Salvar</button>
+      </div>
+    </form>
+
+    <form
+      class="sheet"
+      id="sheetS"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="sTitle"
+      novalidate
+      autocomplete="off"
+      hidden
+    >
+      <div class="sheet-head">
+        <div class="dh"><h2 id="sTitle">Novo pedido de vendedor</h2></div>
+        <button type="button" class="icon-btn" data-close aria-label="Fechar">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            aria-hidden="true"
+          >
+            <path d="M6 6l12 12M18 6L6 18" />
+          </svg>
+        </button>
+      </div>
+      <div class="sheet-body">
+        <p class="lbl">Vendedor</p>
+        <div class="field">
+          <label for="s-name">Nome <span class="req">(obrigatório)</span></label>
+          <input id="s-name" type="text" placeholder="Nome da vendedora" />
+        </div>
+        <div class="two">
+          <div class="field">
+            <label for="s-code">Código</label>
+            <input id="s-code" type="text" inputmode="numeric" />
+          </div>
+          <div class="field">
+            <label for="s-person">Pessoa (código)</label>
+            <input id="s-person" type="text" inputmode="numeric" />
+          </div>
+        </div>
+        <p class="lbl">Informação do vendedor</p>
+        <div class="two">
+          <div class="field">
+            <label for="s-company">Empresa</label>
+            <input id="s-company" type="text" />
+          </div>
+          <div class="field">
+            <label for="s-aux">Cód. auxiliar</label>
+            <input id="s-aux" type="text" />
+          </div>
+        </div>
+        <div class="field">
+          <label for="s-type">Tipo vendedor</label>
+          <input id="s-type" type="text" list="dl-stypes" />
+          <datalist id="dl-stypes"></datalist>
+        </div>
+        <label class="check"><input id="s-inactive" type="checkbox" /> Inativo</label>
+        <p class="lbl">Tabela comissão</p>
+        <div class="field">
+          <label for="s-ctable">Tabela</label>
+          <input id="s-ctable" type="text" />
+        </div>
+        <div class="two">
+          <div class="field">
+            <label for="s-cstart">Dt. início</label>
+            <input id="s-cstart" type="date" />
+          </div>
+          <div class="field">
+            <label for="s-cend">Dt. fim</label>
+            <input id="s-cend" type="date" />
+          </div>
+        </div>
+        <p class="lbl">Andamento</p>
+        <div class="field">
+          <label for="s-status">Situação</label>
+          <select id="s-status"></select>
+        </div>
+        <div class="field">
+          <label for="s-notes">Observações</label>
+          <textarea id="s-notes" placeholder="Loja, gerente que pediu, perfil de acesso…"></textarea>
+        </div>
+        <p class="panel-note" id="sBy"></p>
+        <button type="button" class="btn" id="sCopy">Copiar dados para o TOTVS</button>
+        <p class="err" id="sErr" role="alert"></p>
+      </div>
+      <div class="sheet-foot">
+        <button type="button" class="btn danger" id="sDel" hidden>Excluir</button>
+        <button type="button" class="btn" data-close>Cancelar</button>
+        <button type="submit" class="btn primary" id="sSave">Salvar</button>
       </div>
     </form>
 

@@ -1487,3 +1487,36 @@ h1 {
   letter-spacing: 0;
   text-transform: none;
 }
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  font-weight: 600;
+}
+.check input {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--accent);
+}
+.sheet-body .lbl {
+  margin: 14px 0 0;
+}
+.sheet-body .lbl:first-child {
+  margin-top: 0;
+}
+.stile-s {
+  font-weight: 800;
+}
+.pill.ok {
+  background: #e4f4ea;
+  color: #1f7a4d;
+}
+.pill.off {
+  background: #eceeed;
+  color: #5d6a62;
+}
+.kpis.k4 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}

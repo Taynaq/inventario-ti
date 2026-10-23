@@ -18,7 +18,8 @@ O modo é escolhido pelas variáveis de ambiente. Sem elas, o app roda em modo l
 A **Central de Gestão** reúne várias telas, e cada pessoa vê só as que o administrador liberou:
 
 - **Inventário de TI:** equipamentos, painel e importação de PDF/CSV.
-- **Quebra de máquinas:** registro de dia, máquina, grupo e peças perdidas, com filtro por mês e grupo e resumo por máquina, grupo e dia.
+- **Quebra de máquinas:** registro de dia, máquina, grupo e peças perdidas, com filtro por período e grupo, aba Por data e resumo por máquina, grupo e dia.
+- **Cadastro de vendedores:** pedidos com os campos da tela PESFM009 do TOTVS Moda (código, pessoa, empresa, tipo, comissão), com situação pendente, criado ou cancelado e um botão que copia os dados na ordem da tela do TOTVS. Não grava no TOTVS: a integração depende de uma API liberada pelo suporte TOTVS.
 - **Acessos** (só administradores): libera e remove e-mails e escolhe as telas de cada pessoa. A pessoa liberada cria a própria conta e a própria senha na tela de login.
 
 Para acrescentar uma tela nova, cadastre-a em `src/modules.ts` e em `supabase/schema.sql` (função `my_modules` e as regras da tabela). Veja o `GUIA-BANCO-DE-DADOS.md`.

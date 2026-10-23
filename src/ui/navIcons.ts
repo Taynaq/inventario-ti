@@ -8,6 +8,9 @@ export const SECTION_ICONS = {
   quebras: svg(
     '<path d="M14.5 6.5a4 4 0 0 0 4.9 4.9l-9.4 9.4a2.1 2.1 0 0 1-3-3l9.4-9.4a4 4 0 0 0-1.9-1.9z"/>',
   ),
+  vendedores: svg(
+    '<circle cx="12" cy="8" r="3.2"/><path d="M5 20c0-3.6 3.1-6 7-6s7 2.4 7 6"/><path d="M16.5 12.5l1.5 1.5 3-3"/>',
+  ),
   acessos: svg(
     '<circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5"/><path d="M16 5a3 3 0 0 1 0 6M18 14.8c1.8.6 3 2.3 3 5.2"/>',
   ),

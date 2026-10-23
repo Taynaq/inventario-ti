@@ -1,6 +1,8 @@
 import type { BreakdownStore } from '../data/breakdownStore';
+import type { SellerStore } from '../data/sellerStore';
 import type { Store } from '../data/store';
 import { EMPTY_BREAKDOWN_FILTERS, filterBreakdowns, type Breakdown } from '../domain/breakdown';
+import { countByStatus, type SellerRequest } from '../domain/seller';
 import { warrantyAlert } from '../domain/warranty';
 import type { ModuleId } from '../modules';
 import type { Equipment } from '../types';
@@ -14,6 +16,7 @@ interface HomeOptions {
   admin: boolean;
   store: Store | null;
   breakdowns: BreakdownStore | null;
+  sellers: SellerStore | null;
   go: (section: HomeGo) => void;
 }
 
@@ -23,7 +26,8 @@ const plural = (n: number, one: string, many: string): string => `${n} ${n === 1
 export class HomeView {
   private equipment: Equipment[] = [];
   private breaks: Breakdown[] = [];
-  private ready = { inv: false, brk: false };
+  private sellerItems: SellerRequest[] = [];
+  private ready = { inv: false, brk: false, sel: false };
 
   constructor(
     private readonly root: HTMLElement,
@@ -33,7 +37,8 @@ export class HomeView {
   mount(): void {
     this.root.addEventListener('click', (e) => {
       const id = (e.target as Element).closest<HTMLElement>('[data-go]')?.dataset.go;
-      if (id === 'inventario' || id === 'quebras' || id === 'acessos') this.opts.go(id);
+      if (id === 'inventario' || id === 'quebras' || id === 'vendedores' || id === 'acessos')
+        this.opts.go(id);
     });
     const noop = (): void => undefined;
     if (this.opts.store) {
@@ -50,6 +55,13 @@ export class HomeView {
         this.render();
       }, noop);
     } else this.ready.brk = true;
+    if (this.opts.sellers) {
+      this.opts.sellers.subscribe((items) => {
+        this.sellerItems = items;
+        this.ready.sel = true;
+        this.render();
+      }, noop);
+    } else this.ready.sel = true;
     this.render();
   }
 
@@ -77,6 +89,10 @@ export class HomeView {
     const kpis: string[] = [];
     if (has('quebras')) {
       kpis.push(kpi('Quebras hoje', this.ready.brk ? String(todayCount) : '…', todayCount > 0));
+    }
+    if (has('vendedores')) {
+      const pending = countByStatus(this.sellerItems).pendente;
+      kpis.push(kpi('Pedidos de vendedor', this.ready.sel ? String(pending) : '…', pending > 0));
     }
     if (has('inventario')) {
       kpis.push(kpi('Equipamentos', this.ready.inv ? String(this.equipment.length) : '…', false));
@@ -107,6 +123,20 @@ export class HomeView {
             : this.breaks.length === 0
               ? 'Nenhuma quebra registrada'
               : `${plural(weekCount, 'quebra', 'quebras')} nos últimos 7 dias`,
+        ),
+      );
+    }
+    if (has('vendedores')) {
+      const n = countByStatus(this.sellerItems);
+      tiles.push(
+        tile(
+          'vendedores',
+          'Cadastro de vendedores',
+          !this.ready.sel
+            ? 'Carregando…'
+            : this.sellerItems.length === 0
+              ? 'Nenhum pedido ainda'
+              : `${plural(n.pendente, 'pedido pendente', 'pedidos pendentes')}`,
         ),
       );
     }

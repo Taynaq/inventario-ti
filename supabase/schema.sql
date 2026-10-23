@@ -83,7 +83,7 @@ security definer
 set search_path = public
 as $$
   select coalesce(
-    (select case when is_admin then array['inventario','quebras'] else modules end
+    (select case when is_admin then array['inventario','quebras','vendedores'] else modules end
        from public.allowed_emails
       where email = lower(coalesce(auth.jwt() ->> 'email', ''))),
     '{}'::text[]
@@ -248,6 +248,76 @@ begin
     where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'quebras'
   ) then
     alter publication supabase_realtime add table public.quebras;
+  end if;
+end;
+$$;
+
+-- ------------------------------------------- pedidos de cadastro de vendedores
+-- Campos da tela PESFM009 (Manutenção de Vendedor) do TOTVS Moda.
+create table if not exists public.vendedores (
+  id           uuid primary key default gen_random_uuid(),
+  name         text not null check (char_length(btrim(name)) > 0),
+  seller_code  text not null default '',
+  person_code  text not null default '',
+  company      text not null default '',
+  aux_code     text not null default '',
+  seller_type  text not null default '',
+  inactive     boolean not null default false,
+  comm_table   text not null default '',
+  comm_start   date,
+  comm_end     date,
+  status       text not null default 'pendente' check (status in ('pendente', 'criado', 'cancelado')),
+  notes        text not null default '',
+  requested_by text not null default '',
+  created_at   timestamptz not null default now(),
+  updated_at   timestamptz not null default now(),
+  updated_by   uuid references auth.users (id) on delete set null
+);
+
+create index if not exists vendedores_status_idx on public.vendedores (status, created_at desc);
+
+create or replace function public.vendedores_touch()
+returns trigger
+language plpgsql
+as $$
+begin
+  new.updated_at := now();
+  new.updated_by := auth.uid();
+  return new;
+end;
+$$;
+
+drop trigger if exists vendedores_touch on public.vendedores;
+create trigger vendedores_touch
+  before insert or update on public.vendedores
+  for each row execute function public.vendedores_touch();
+
+alter table public.vendedores enable row level security;
+
+drop policy if exists "vendedores leem" on public.vendedores;
+create policy "vendedores leem" on public.vendedores
+  for select to authenticated using (public.has_module('vendedores'));
+
+drop policy if exists "vendedores criam" on public.vendedores;
+create policy "vendedores criam" on public.vendedores
+  for insert to authenticated with check (public.has_module('vendedores'));
+
+drop policy if exists "vendedores alteram" on public.vendedores;
+create policy "vendedores alteram" on public.vendedores
+  for update to authenticated
+  using (public.has_module('vendedores')) with check (public.has_module('vendedores'));
+
+drop policy if exists "vendedores excluem" on public.vendedores;
+create policy "vendedores excluem" on public.vendedores
+  for delete to authenticated using (public.has_module('vendedores'));
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'vendedores'
+  ) then
+    alter publication supabase_realtime add table public.vendedores;
   end if;
 end;
 $$;
