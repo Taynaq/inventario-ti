@@ -89,7 +89,7 @@ export class ImportView {
     const items = this.getItems();
     if (items.length === 0 || this.busy) return;
     const answer = window.prompt(
-      `Isto apaga TODOS os ${items.length} equipamentos.\n\nPara confirmar, digite APAGAR:`,
+      `Isto apaga TODOS os ${items.length} equipamentos e também o histórico de problemas de cada um.\n\nPara confirmar, digite APAGAR:`,
     );
     if (answer === null || answer.trim().toUpperCase() !== 'APAGAR') return;
     try {

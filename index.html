@@ -462,6 +462,61 @@
       </div>
     </form>
 
+    <form
+      class="sheet"
+      id="sheetInc"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="incTitle"
+      novalidate
+      autocomplete="off"
+      hidden
+    >
+      <div class="sheet-head">
+        <div class="dh">
+          <h2 id="incTitle">Registrar problema</h2>
+          <p id="incSub"></p>
+        </div>
+        <button type="button" class="icon-btn" data-inc-back aria-label="Voltar">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            aria-hidden="true"
+          >
+            <path d="M6 6l12 12M18 6L6 18" />
+          </svg>
+        </button>
+      </div>
+      <div class="sheet-body">
+        <div class="field">
+          <label for="inc-day">Dia</label>
+          <input id="inc-day" type="date" />
+        </div>
+        <div class="field">
+          <label for="inc-reason">Motivo <span class="req">(obrigatório)</span></label>
+          <input id="inc-reason" type="text" list="dl-reasons" placeholder="Ex.: queda de energia na rede" />
+          <datalist id="dl-reasons"></datalist>
+        </div>
+        <div class="field">
+          <label for="inc-solution">O que foi feito</label>
+          <textarea
+            id="inc-solution"
+            placeholder="Como foi resolvido, peça trocada, quem atendeu."
+          ></textarea>
+        </div>
+        <label class="check"><input id="inc-resolved" type="checkbox" /> Já foi resolvido</label>
+        <p class="err" id="incErr" role="alert"></p>
+      </div>
+      <div class="sheet-foot">
+        <button type="button" class="btn danger" id="incDel" hidden>Excluir</button>
+        <button type="button" class="btn" data-inc-back>Voltar</button>
+        <button type="submit" class="btn primary" id="incSave">Salvar</button>
+      </div>
+    </form>
+
     <section
       class="sheet"
       id="sheetDetail"

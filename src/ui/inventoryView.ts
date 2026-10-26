@@ -1,4 +1,5 @@
 import type { Equipment, EquipmentDraft, Filters, StatusFilter, StatusId, CategoryId } from '../types';
+import type { IncidentStore } from '../data/incidentStore';
 import { describeError, type Store } from '../data/store';
 import {
   CATEGORIES,
@@ -10,7 +11,17 @@ import {
 } from '../domain/catalog';
 import { applyDraft, createEquipment } from '../domain/equipment';
 import { EMPTY_FILTERS, filterEquipment, summarize } from '../domain/filter';
-import { formatDate, formatMoney, formatMoneyShort, parseMoney } from '../domain/format';
+import { formatDate, formatMoney, formatMoneyShort, isoDateIn, parseMoney } from '../domain/format';
+import {
+  applyIncidentDraft,
+  countByEquipment,
+  createIncident,
+  incidentsOf,
+  problemsText,
+  readIncident,
+  reasonSuggestions,
+  type Incident,
+} from '../domain/incident';
 import { warrantyAlert } from '../domain/warranty';
 import { $, esc, toast } from './dom';
 import { DashboardView } from './dashboardView';
@@ -29,6 +40,8 @@ type Tab = 'lista' | 'painel' | 'importar';
 
 export class InventoryView {
   private items: Equipment[] = [];
+  private incidents: Incident[] = [];
+  private editingIncident: string | null = null;
   private ready = false;
   private syncFailed = false;
   private filters: Filters = { ...EMPTY_FILTERS };
@@ -45,6 +58,7 @@ export class InventoryView {
 
   constructor(
     private readonly store: Store,
+    private readonly incidentStore: IncidentStore,
     private readonly opts: ViewOptions = {},
   ) {}
 
@@ -67,6 +81,19 @@ export class InventoryView {
     );
     this.bind();
     this.render();
+    this.incidentStore.subscribe(
+      (items) => {
+        this.incidents = items;
+        this.render();
+      },
+      (e) => {
+        toast(
+          e.message.includes('tabela ocorrencias')
+            ? 'O histórico de problemas ainda não foi ativado no banco. Rode o SQL do guia.'
+            : describeError(e),
+        );
+      },
+    );
     this.store.subscribe(
       (items) => {
         this.items = items;
@@ -142,8 +169,20 @@ export class InventoryView {
       if (this.detailId) this.openForm(this.detailId);
     });
     $('#delBtn').addEventListener('click', () => void this.deleteCurrent());
+    $('#sheetInc').addEventListener('submit', (e) => {
+      e.preventDefault();
+      void this.submitIncident();
+    });
+    $('#sheetInc').addEventListener('click', (e) => {
+      if ((e.target as Element).closest('[data-inc-back]')) this.backToDetail();
+    });
+    $('#incDel').addEventListener('click', () => void this.deleteIncident());
     $('#detailBody').addEventListener('click', (e) => {
-      const b = (e.target as Element).closest<HTMLElement>('[data-setstatus]');
+      const t = e.target as Element;
+      if (t.closest('[data-inc-add]')) return this.openIncident(null);
+      const inc = t.closest<HTMLElement>('[data-inc-open]')?.dataset.incOpen;
+      if (inc) return this.openIncident(inc);
+      const b = t.closest<HTMLElement>('[data-setstatus]');
       const st = b?.dataset.setstatus;
       if (isStatusId(st)) void this.setStatus(st);
     });
@@ -193,7 +232,7 @@ export class InventoryView {
     this.renderHead();
     this.renderList();
     this.renderFoot();
-    this.dash.render(this.items, this.ready);
+    this.dash.render(this.items, this.ready, this.incidents);
     this.importer.update();
     if (!$('#sheetDetail').hidden) this.renderDetail();
   }
@@ -257,6 +296,7 @@ export class InventoryView {
 
   private cardHtml(it: Equipment): string {
     const w = warrantyAlert(it);
+    const hist = countByEquipment(this.incidents).get(it.id);
     const sub = [CATEGORY_LABELS[it.category], it.brand].filter(Boolean).join(' · ');
     const who = [it.owner, it.location].filter(Boolean).join(' · ');
     return (
@@ -270,6 +310,7 @@ export class InventoryView {
       `<span class="row3">` +
       (it.tag ? `<span class="tagno">${esc(it.tag)}</span>` : '') +
       (w ? `<span class="pill ${w.kind}">${esc(w.text)}</span>` : '') +
+      (hist ? `<span class="pill hist">${esc(problemsText(hist.total))}</span>` : '') +
       (it.example ? `<span class="pill ex">Exemplo</span>` : '') +
       `</span></span></button></li>`
     );
@@ -428,11 +469,112 @@ export class InventoryView {
     $('#detailBody').innerHTML =
       `<div><p class="lbl">Status</p><div class="seg">${seg}</div></div>` +
       (it.example ? '<p class="muted">Este é um equipamento de exemplo.</p>' : '') +
-      dl;
+      dl +
+      this.historyHtml(it.id);
 
     const armed = this.armedDelete === it.id;
-    $('#delBtn').textContent = armed ? 'Toque de novo para excluir' : 'Excluir';
+    const n = incidentsOf(this.incidents, it.id).length;
+    $('#delBtn').textContent = armed
+      ? n > 0
+        ? `Toque de novo (apaga também ${problemsText(n)})`
+        : 'Toque de novo para excluir'
+      : 'Excluir';
     $('#delBtn').classList.toggle('armed', armed);
+  }
+
+  private historyHtml(equipmentId: string): string {
+    const list = incidentsOf(this.incidents, equipmentId);
+    const open = list.filter((i) => !i.resolved).length;
+    const rows = list
+      .map(
+        (i) =>
+          `<li><button type="button" class="hrow" data-inc-open="${esc(i.id)}">` +
+          `<span class="hday">${esc(formatDate(i.day))}</span>` +
+          `<span class="hmain"><b>${esc(i.reason)}</b>` +
+          (i.solution ? `<small>${esc(i.solution)}</small>` : '') +
+          `</span><span class="pill ${i.resolved ? 'ok' : 'warn'}">${i.resolved ? 'Resolvido' : 'Em aberto'}</span></button></li>`,
+      )
+      .join('');
+    return (
+      `<section class="hist"><div class="hist-head"><p class="lbl">Histórico de problemas</p>` +
+      (list.length
+        ? `<span class="pill hist">${esc(problemsText(list.length))}${open ? ` · ${open} em aberto` : ''}</span>`
+        : '') +
+      `</div>` +
+      (list.length
+        ? `<ul class="hlist">${rows}</ul>`
+        : '<p class="muted">Nenhum problema registrado neste equipamento.</p>') +
+      `<button type="button" class="btn" data-inc-add>Registrar problema</button></section>`
+    );
+  }
+
+  private openIncident(id: string | null): void {
+    const eq = this.items.find((x) => x.id === this.detailId);
+    if (!eq) return;
+    const it = id ? this.incidents.find((x) => x.id === id) : undefined;
+    this.editingIncident = it?.id ?? null;
+    $('#incTitle').textContent = it ? 'Problema registrado' : 'Registrar problema';
+    $('#incSub').textContent = eq.name;
+    $<HTMLInputElement>('#inc-day').value = it?.day ?? isoDateIn(0);
+    $<HTMLInputElement>('#inc-reason').value = it?.reason ?? '';
+    $<HTMLTextAreaElement>('#inc-solution').value = it?.solution ?? '';
+    $<HTMLInputElement>('#inc-resolved').checked = it?.resolved ?? false;
+    $('#incErr').textContent = '';
+    $('#incDel').hidden = !it;
+    $('#dl-reasons').innerHTML = reasonSuggestions(this.incidents)
+      .map((r) => `<option value="${esc(r)}"></option>`)
+      .join('');
+    $('#sheetDetail').hidden = true;
+    this.showSheet($('#sheetInc'));
+    $(it ? '#inc-solution' : '#inc-reason').focus();
+  }
+
+  private backToDetail(): void {
+    $('#sheetInc').hidden = true;
+    this.renderDetail();
+    this.showSheet($('#sheetDetail'));
+  }
+
+  private async submitIncident(): Promise<void> {
+    const equipmentId = this.detailId;
+    if (!equipmentId) return;
+    const read = readIncident({
+      day: $<HTMLInputElement>('#inc-day').value,
+      reason: $<HTMLInputElement>('#inc-reason').value,
+      solution: $<HTMLTextAreaElement>('#inc-solution').value,
+      resolved: $<HTMLInputElement>('#inc-resolved').checked,
+    });
+    if ('error' in read) {
+      $('#incErr').textContent = read.error;
+      $(`#inc-${read.focus}`).focus();
+      return;
+    }
+    const prev = this.editingIncident ? this.incidents.find((x) => x.id === this.editingIncident) : undefined;
+    const item = prev ? applyIncidentDraft(prev, read.draft) : createIncident(equipmentId, read.draft);
+    const btn = $<HTMLButtonElement>('#incSave');
+    btn.disabled = true;
+    try {
+      await this.incidentStore.save(item);
+      this.backToDetail();
+      toast(prev ? 'Alterações salvas' : 'Problema registrado');
+    } catch (e) {
+      $('#incErr').textContent = describeError(e);
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  private async deleteIncident(): Promise<void> {
+    const id = this.editingIncident;
+    if (!id) return;
+    if (!window.confirm('Excluir este registro do histórico? Isso não pode ser desfeito.')) return;
+    try {
+      await this.incidentStore.remove(id);
+      this.backToDetail();
+      toast('Registro excluído');
+    } catch (e) {
+      toast(describeError(e));
+    }
   }
 
   // ---------- ações ----------

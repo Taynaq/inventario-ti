@@ -321,3 +321,66 @@ begin
   end if;
 end;
 $$;
+
+-- ------------------------------------------- histórico de problemas dos equipamentos
+-- Fica guardado mesmo depois que o problema é resolvido. Se o equipamento for
+-- excluído, o histórico dele também é apagado.
+create table if not exists public.ocorrencias (
+  id           uuid primary key default gen_random_uuid(),
+  equipment_id uuid not null references public.equipamentos (id) on delete cascade,
+  day          date not null,
+  reason       text not null check (char_length(btrim(reason)) > 0),
+  solution     text not null default '',
+  resolved     boolean not null default false,
+  created_at   timestamptz not null default now(),
+  updated_at   timestamptz not null default now(),
+  updated_by   uuid references auth.users (id) on delete set null
+);
+
+create index if not exists ocorrencias_equip_idx on public.ocorrencias (equipment_id, day desc);
+
+create or replace function public.ocorrencias_touch()
+returns trigger
+language plpgsql
+as $$
+begin
+  new.updated_at := now();
+  new.updated_by := auth.uid();
+  return new;
+end;
+$$;
+
+drop trigger if exists ocorrencias_touch on public.ocorrencias;
+create trigger ocorrencias_touch
+  before insert or update on public.ocorrencias
+  for each row execute function public.ocorrencias_touch();
+
+alter table public.ocorrencias enable row level security;
+
+drop policy if exists "ocorrencias leem" on public.ocorrencias;
+create policy "ocorrencias leem" on public.ocorrencias
+  for select to authenticated using (public.has_module('inventario'));
+
+drop policy if exists "ocorrencias criam" on public.ocorrencias;
+create policy "ocorrencias criam" on public.ocorrencias
+  for insert to authenticated with check (public.has_module('inventario'));
+
+drop policy if exists "ocorrencias alteram" on public.ocorrencias;
+create policy "ocorrencias alteram" on public.ocorrencias
+  for update to authenticated
+  using (public.has_module('inventario')) with check (public.has_module('inventario'));
+
+drop policy if exists "ocorrencias excluem" on public.ocorrencias;
+create policy "ocorrencias excluem" on public.ocorrencias
+  for delete to authenticated using (public.has_module('inventario'));
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'ocorrencias'
+  ) then
+    alter publication supabase_realtime add table public.ocorrencias;
+  end if;
+end;
+$$;

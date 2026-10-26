@@ -2,6 +2,7 @@ import './styles.css';
 import { AccessApi } from './data/access';
 import { CloudBreakdownStore, LocalBreakdownStore, type BreakdownStore } from './data/breakdownStore';
 import { CloudStore } from './data/cloudStore';
+import { CloudIncidentStore, LocalIncidentStore, type IncidentStore } from './data/incidentStore';
 import { LocalStore } from './data/localStore';
 import { CloudSellerStore, LocalSellerStore, type SellerStore } from './data/sellerStore';
 import type { Store } from './data/store';
@@ -25,22 +26,25 @@ async function main(): Promise<void> {
   let store: Store;
   let breakdowns: BreakdownStore;
   let sellers: SellerStore;
+  let incidents: IncidentStore;
   let account = '';
   let modules: readonly ModuleId[] = MODULE_IDS;
   let access: AccessApi | null = null;
   let onSignOut: (() => void) | null = null;
-  let options: ConstructorParameters<typeof InventoryView>[1] = {};
+  let options: ConstructorParameters<typeof InventoryView>[2] = {};
 
   if (!db) {
     // Sem as chaves do Supabase o app funciona sozinho, guardando tudo neste navegador.
     store = new LocalStore();
     breakdowns = new LocalBreakdownStore();
     sellers = new LocalSellerStore();
+    incidents = new LocalIncidentStore();
   } else {
     account = await requireMember(db);
     store = new CloudStore(db);
     breakdowns = new CloudBreakdownStore(db);
     sellers = new CloudSellerStore(db);
+    incidents = new CloudIncidentStore(db);
     const api = new AccessApi(db, account.toLowerCase());
     modules = await api.myModules();
     if (await api.isAdmin()) access = api;
@@ -52,7 +56,7 @@ async function main(): Promise<void> {
     onSignOut = () => void signOut(db);
   }
 
-  const inventory = new InventoryView(store, options);
+  const inventory = new InventoryView(store, incidents, options);
   const quebras = new BreakdownView(breakdowns, setSummary);
   const vendedores = new SellerView(sellers, account, setSummary);
   // Só monta (e assina no banco) as telas que a pessoa pode usar.

@@ -1520,3 +1520,60 @@ h1 {
 .kpis.k4 {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
+
+.pill.hist {
+  background: #eaf0ec;
+  color: #3f5a49;
+}
+.hist {
+  display: grid;
+  gap: 10px;
+  margin-top: 6px;
+}
+.hist-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.hist-head .lbl {
+  margin: 0;
+}
+.hlist {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+.hrow {
+  width: 100%;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.hday {
+  font: 700 13px var(--font-body);
+  color: var(--muted);
+  padding-top: 2px;
+}
+.hmain {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.hmain small {
+  color: var(--muted);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}

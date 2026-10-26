@@ -1,6 +1,7 @@
 import type { Equipment, Filters, StatusFilter } from '../types';
 import { buildDashboard } from '../domain/dashboard';
 import { isCategoryId } from '../domain/catalog';
+import { problemsText, topProblemEquipment, type Incident } from '../domain/incident';
 import { formatDate, formatMoneyShort } from '../domain/format';
 import { bars, pct, panel } from './bars';
 import { esc } from './dom';
@@ -34,7 +35,7 @@ export class DashboardView {
     });
   }
 
-  render(items: readonly Equipment[], ready: boolean): void {
+  render(items: readonly Equipment[], ready: boolean, incidents: readonly Incident[] = []): void {
     if (!ready) {
       this.root.innerHTML = '<div class="skel"></div>';
       return;
@@ -105,8 +106,19 @@ export class DashboardView {
             ? `<button type="button" class="link" data-go="garantia:1">Ver as ${d.warranty.length} garantias</button>`
             : '');
 
+    const top = topProblemEquipment(incidents, items);
+    const openCount = incidents.filter((i) => !i.resolved).length;
+    const problems = top.length
+      ? panel(
+          'Equipamentos com mais problemas',
+          `${problemsText(incidents.length)} registrados, ${openCount} em aberto. Conta também os já resolvidos.`,
+          bars(top, 'query'),
+        )
+      : '';
+
     this.root.innerHTML =
       kpis +
+      problems +
       panel('Situação', 'Todos os equipamentos. Toque para ver a lista.', stack) +
       panel('Garantias que pedem atenção', 'Vencidas ou com até 60 dias.', warranty) +
       panel('Por categoria', 'Só equipamentos ativos (sem os baixados).', bars(d.byCategory, 'category')) +
