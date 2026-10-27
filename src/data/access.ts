@@ -26,6 +26,28 @@ export function accessErrorMessage(e: unknown): string {
   return err?.message ?? 'Não foi possível concluir.';
 }
 
+/** Traduz a resposta de erro da função criar-usuario para uma frase em português. */
+export async function functionErrorMessage(e: unknown): Promise<string> {
+  const err = e as { name?: string; message?: string; context?: unknown } | null;
+  const ctx = err?.context;
+  if (ctx instanceof Response) {
+    if (ctx.status === 404) {
+      return 'A função "criar-usuario" ainda não foi publicada no Supabase. Veja o passo no guia.';
+    }
+    try {
+      const body = (await ctx.clone().json()) as { error?: unknown };
+      if (typeof body.error === 'string' && body.error) return body.error;
+    } catch {
+      // resposta sem JSON: cai na mensagem padrão abaixo
+    }
+    if (ctx.status === 401 || ctx.status === 403) return 'Você não tem permissão para fazer isso.';
+  }
+  if (err?.name === 'FunctionsFetchError' || /fetch|network|failed to load/i.test(err?.message ?? '')) {
+    return 'Sem conexão com o Supabase. Tente de novo.';
+  }
+  return err?.message ?? 'Não foi possível concluir.';
+}
+
 /** Lista de e-mails liberados no modo compartilhado (tabela allowed_emails). */
 export class AccessApi {
   constructor(
@@ -68,6 +90,32 @@ export class AccessApi {
       .from('allowed_emails')
       .insert({ email: normalizeEmail(email), is_admin: isAdmin, modules: [...modules] });
     if (error) throw error;
+  }
+
+  /** Cria o login já com senha e sem e-mail de confirmação (feito pela função criar-usuario). */
+  async createUser(
+    email: string,
+    password: string,
+    isAdmin: boolean,
+    modules: readonly ModuleId[],
+  ): Promise<void> {
+    await this.callFunction({
+      action: 'create',
+      email: normalizeEmail(email),
+      password,
+      isAdmin,
+      modules: [...modules],
+    });
+  }
+
+  /** Troca a senha de uma pessoa que já tem conta. */
+  async setPassword(email: string, password: string): Promise<void> {
+    await this.callFunction({ action: 'set_password', email: normalizeEmail(email), password });
+  }
+
+  private async callFunction(body: Record<string, unknown>): Promise<void> {
+    const { error } = await this.db.functions.invoke('criar-usuario', { body });
+    if (error) throw new Error(await functionErrorMessage(error));
   }
 
   async setModules(email: string, modules: readonly ModuleId[]): Promise<void> {

@@ -31,6 +31,7 @@
           >
           <span class="who">
             <span class="av" id="avatar" hidden></span>
+            <button type="button" class="signout" id="changePwd" hidden>Senha</button>
             <button type="button" class="signout" id="signOut" hidden>Sair</button>
           </span>
         </div>
@@ -446,6 +447,48 @@
         <button type="button" class="btn danger" id="sDel" hidden>Excluir</button>
         <button type="button" class="btn" data-close>Fechar</button>
         <button type="submit" class="btn primary" id="sSave">Enviar</button>
+      </div>
+    </form>
+
+    <form
+      class="sheet"
+      id="sheetPwd"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="pwdTitle"
+      novalidate
+      autocomplete="off"
+      hidden
+    >
+      <div class="sheet-head">
+        <div class="dh"><h2 id="pwdTitle">Trocar minha senha</h2></div>
+        <button type="button" class="icon-btn" data-close aria-label="Fechar">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            aria-hidden="true"
+          >
+            <path d="M6 6l12 12M18 6L6 18" />
+          </svg>
+        </button>
+      </div>
+      <div class="sheet-body">
+        <div class="field">
+          <label for="pwd-new">Nova senha (mínimo 8 caracteres)</label>
+          <input id="pwd-new" type="password" autocomplete="new-password" />
+        </div>
+        <div class="field">
+          <label for="pwd-again">Repita a nova senha</label>
+          <input id="pwd-again" type="password" autocomplete="new-password" />
+        </div>
+        <p class="err" id="pwdErr" role="alert"></p>
+      </div>
+      <div class="sheet-foot">
+        <button type="button" class="btn" data-close>Cancelar</button>
+        <button type="submit" class="btn primary" id="pwdSave">Salvar senha</button>
       </div>
     </form>
 

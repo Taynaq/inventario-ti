@@ -1681,3 +1681,34 @@ h1 {
     content: none;
   }
 }
+
+.passrow {
+  display: flex;
+  gap: 8px;
+}
+.passrow input {
+  flex: 1;
+  min-width: 0;
+}
+.passrow .btn {
+  flex: none;
+}
+.creds {
+  border-color: var(--accent);
+}
+.creds-box {
+  margin: 0 0 12px;
+  padding: 12px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font: 14px/1.5 var(--font-body);
+  user-select: all;
+}
+.who {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}

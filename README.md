@@ -20,7 +20,7 @@ A **Central de Gestão** reúne várias telas, e cada pessoa vê só as que o ad
 - **Inventário de TI:** equipamentos, painel e importação de PDF/CSV.
 - **Quebra de máquinas:** registro de dia, máquina, grupo e peças perdidas, com filtro por período e grupo, aba Por data e resumo por máquina, grupo e dia.
 - **Solicitação de acessos:** quem tem a tela (por exemplo o RH) pede o acesso de uma pessoa, escolhendo a loja e o setor e informando o nome. A aba **Fila da TI** (só administradores) mostra todos os pedidos, com filtro por situação e loja, e permite marcar como **Feito** com observações. Quem pediu vê só os próprios pedidos e acompanha a situação. A lista de lojas fica em `src/domain/request.ts`.
-- **Acessos** (só administradores): libera e remove e-mails e escolhe as telas de cada pessoa. A pessoa liberada cria a própria conta e a própria senha na tela de login.
+- **Acessos** (só administradores): libera e remove e-mails e escolhe as telas de cada pessoa. O administrador pode criar o login já com senha (função `supabase/functions/criar-usuario`, sem e-mail de confirmação) e mandar a mensagem pronta pelo WhatsApp, ou só liberar o e-mail para a pessoa criar a própria conta e senha na tela de login.
 
 Para acrescentar uma tela nova, cadastre-a em `src/modules.ts` e em `supabase/schema.sql` (função `my_modules` e as regras da tabela). Veja o `GUIA-BANCO-DE-DADOS.md`.
 

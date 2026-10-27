@@ -29,6 +29,18 @@ Na aba **Acessos** do app, você digita o e-mail de cada pessoa, marca **quais t
 
 **Se você já tinha rodado o `schema.sql` antes:** rode de novo o arquivo inteiro. Ele é seguro de repetir e acrescenta as telas liberadas por pessoa e a tabela de quebras. As pessoas que já estavam liberadas continuam com acesso ao Inventário de TI.
 
+## 3c. Criar o login já com senha (sem e-mail de confirmação)
+
+Para você mesma criar o login de alguém, definir a senha e enviar pelo WhatsApp, o Supabase precisa de uma pequena função. Faça uma vez só:
+
+1. No Supabase, abra **Edge Functions** (menu da esquerda) e clique em **Deploy a new function**, depois em **Via Editor** (os nomes dos botões podem variar um pouco).
+2. Dê o nome exatamente `criar-usuario`.
+3. Apague o texto de exemplo, abra o arquivo `supabase/functions/criar-usuario/index.ts` deste projeto, copie **tudo**, cole no editor e clique em **Deploy**.
+
+Pronto. Na aba **Acessos** do app, digite o e-mail, toque em **Gerar** (ou escreva uma senha), marque as telas e toque em **Criar acesso**. O app mostra uma mensagem pronta com o link, o e-mail e a senha, para copiar ou mandar pelo WhatsApp. O login já nasce confirmado: não chega e-mail nenhum. A pessoa pode trocar a senha no botão **Senha** do topo do app. Para dar uma senha nova a quem já tem conta, use **Nova senha** na lista de acessos.
+
+Segurança: a função só obedece administradores do app. A chave secreta do Supabase fica guardada no servidor dele e nunca vai para o app.
+
 ## 4. Pegar as duas chaves
 
 Em **Project Settings** (engrenagem) e depois **API**, copie:

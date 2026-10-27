@@ -5,7 +5,8 @@ import {
   normalizeEmail,
   type AccessEntry,
 } from '../data/access';
-import { MODULES, isModuleId, type ModuleId } from '../modules';
+import { generatePassword, credentialMessage, isValidPassword, MIN_PASSWORD } from '../domain/credentials';
+import { APP_NAME, MODULES, isModuleId, type ModuleId } from '../modules';
 import { $, esc, toast } from './dom';
 
 const moduleChecks = (name: string, checked: readonly ModuleId[], extra = ''): string =>
@@ -21,6 +22,8 @@ export class AccessView {
   private entries: AccessEntry[] = [];
   private loaded = false;
   private error = '';
+  /** Último login criado ou senha trocada, para copiar e mandar à pessoa. */
+  private creds: { email: string; password: string } | null = null;
 
   constructor(
     private readonly root: HTMLElement,
@@ -36,6 +39,14 @@ export class AccessView {
       if (el?.dataset.act === 'acc-rm') void this.remove(email);
       else if (el?.dataset.act === 'acc-admin') void this.toggleAdmin(email);
       else if (el?.dataset.act === 'acc-link') void this.copyLink();
+      else if (el?.dataset.act === 'acc-gen') this.fillGenerated();
+      else if (el?.dataset.act === 'acc-reset') void this.resetPassword(email);
+      else if (el?.dataset.act === 'acc-copy-creds') void this.copyCreds();
+      else if (el?.dataset.act === 'acc-wa-creds') this.shareCreds();
+      else if (el?.dataset.act === 'acc-close-creds') {
+        this.creds = null;
+        this.render();
+      }
     });
     root.addEventListener('change', (e) => {
       const t = e.target as HTMLInputElement;
@@ -77,7 +88,8 @@ export class AccessView {
       modules +
       (me
         ? ''
-        : `<div class="acc-btns"><button type="button" class="btn" data-act="acc-admin" data-email="${esc(a.email)}">` +
+        : `<div class="acc-btns"><button type="button" class="btn" data-act="acc-reset" data-email="${esc(a.email)}">Nova senha</button>` +
+          `<button type="button" class="btn" data-act="acc-admin" data-email="${esc(a.email)}">` +
           `${a.isAdmin ? 'Tirar admin' : 'Tornar admin'}</button>` +
           `<button type="button" class="btn danger" data-act="acc-rm" data-email="${esc(a.email)}">Remover</button></div>`) +
       `</li>`
@@ -85,16 +97,30 @@ export class AccessView {
   }
 
   private render(): void {
+    const c = this.creds;
+    const credsCard = c
+      ? `<section class="imp-card creds"><h2>Acesso pronto</h2>` +
+        `<p class="muted">Envie estes dados para a pessoa agora. Por segurança, a senha não aparece de novo depois que você fechar este aviso.</p>` +
+        `<pre class="creds-box">${esc(this.credsText(c))}</pre>` +
+        `<div class="acc-btns"><button type="button" class="btn primary" data-act="acc-copy-creds">Copiar mensagem</button>` +
+        `<button type="button" class="btn" data-act="acc-wa-creds">WhatsApp</button>` +
+        `<button type="button" class="btn" data-act="acc-close-creds">Fechar</button></div></section>`
+      : '';
     this.root.innerHTML =
+      credsCard +
       `<section class="imp-card"><h2>Liberar uma pessoa</h2>` +
-      `<p class="muted">Digite o e-mail e marque as telas que ela pode usar. Depois peça para ela abrir o app, ` +
-      `tocar em <strong>Criar conta</strong> com esse mesmo e-mail e escolher a própria senha.</p>` +
+      `<p class="muted">Digite o e-mail, defina uma senha e marque as telas que ela pode usar. O login já fica pronto, ` +
+      `sem e-mail de confirmação, e você envia a senha para a pessoa. Se deixar a senha em branco, ela cria a própria ` +
+      `em <strong>Criar conta</strong>.</p>` +
       `<form id="acc-form" novalidate><div class="field"><label for="acc-email">E-mail da pessoa</label>` +
       `<input id="acc-email" type="email" inputmode="email" autocomplete="off" placeholder="nome@empresa.com.br" /></div>` +
+      `<div class="field"><label for="acc-pass">Senha (mínimo ${MIN_PASSWORD} caracteres)</label>` +
+      `<div class="passrow"><input id="acc-pass" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Digite ou toque em Gerar" />` +
+      `<button type="button" class="btn" data-act="acc-gen">Gerar</button></div></div>` +
       `<div class="field"><span class="lbl">Telas liberadas</span>${moduleChecks('acc-new', [])}</div>` +
       `<label class="checkrow"><input id="acc-admin" type="checkbox" />Administrador (acessa todas as telas e libera pessoas)</label>` +
       `<p class="msg bad" id="acc-err" role="alert">${esc(this.error)}</p>` +
-      `<button type="submit" class="btn primary">Liberar acesso</button></form></section>` +
+      `<button type="submit" class="btn primary">Criar acesso</button></form></section>` +
       `<section class="imp-card"><h2>Quem tem acesso</h2>` +
       (this.loaded
         ? this.entries.length === 0
@@ -122,14 +148,70 @@ export class AccessView {
       .filter(isModuleId);
     if (!isValidEmail(email)) return this.setError('Digite um e-mail válido, como nome@empresa.com.br.');
     if (!admin && modules.length === 0) return this.setError('Marque pelo menos uma tela para essa pessoa.');
+    const password = $<HTMLInputElement>('#acc-pass').value;
+    if (password && !isValidPassword(password)) {
+      return this.setError(`A senha precisa ter pelo menos ${MIN_PASSWORD} caracteres.`);
+    }
+    const btn = this.root.querySelector<HTMLButtonElement>('#acc-form button[type="submit"]');
+    if (btn) btn.disabled = true;
     try {
-      await this.api.add(email, admin, modules);
-      toast(`${email} liberado`);
+      if (password) {
+        await this.api.createUser(email, password, admin, modules);
+        this.creds = { email, password };
+        toast(`Login de ${email} criado`);
+      } else {
+        await this.api.add(email, admin, modules);
+        toast(`${email} liberado`);
+      }
       this.error = '';
       await this.refresh();
+      if (this.creds) window.scrollTo(0, 0);
     } catch (e) {
       this.setError(accessErrorMessage(e));
+    } finally {
+      if (btn) btn.disabled = false;
     }
+  }
+
+  private credsText(c: { email: string; password: string }): string {
+    return credentialMessage({ appName: APP_NAME, url: this.appUrl(), email: c.email, password: c.password });
+  }
+
+  private fillGenerated(): void {
+    $<HTMLInputElement>('#acc-pass').value = generatePassword();
+  }
+
+  private async resetPassword(email: string): Promise<void> {
+    if (!window.confirm(`Gerar uma nova senha para ${email}? A senha antiga deixa de funcionar.`)) return;
+    const password = generatePassword();
+    try {
+      await this.api.setPassword(email, password);
+      this.creds = { email, password };
+      toast('Nova senha criada');
+      this.render();
+      window.scrollTo(0, 0);
+    } catch (e) {
+      toast(accessErrorMessage(e));
+    }
+  }
+
+  private async copyCreds(): Promise<void> {
+    if (!this.creds) return;
+    try {
+      await navigator.clipboard.writeText(this.credsText(this.creds));
+      toast('Mensagem copiada');
+    } catch {
+      toast('Não consegui copiar. Selecione o texto e copie.');
+    }
+  }
+
+  private shareCreds(): void {
+    if (!this.creds) return;
+    window.open(
+      `https://wa.me/?text=${encodeURIComponent(this.credsText(this.creds))}`,
+      '_blank',
+      'noopener',
+    );
   }
 
   private async toggleModule(email: string, id: string, on: boolean): Promise<void> {

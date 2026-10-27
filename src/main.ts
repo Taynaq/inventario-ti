@@ -13,6 +13,7 @@ import { $ } from './ui/dom';
 import { requireMember, signOut } from './ui/auth';
 import { HomeView } from './ui/homeView';
 import { InventoryView } from './ui/inventoryView';
+import { PasswordDialog } from './ui/passwordView';
 import { RequestView } from './ui/requestView';
 import { Shell, type Screen } from './ui/shell';
 
@@ -54,6 +55,7 @@ async function main(): Promise<void> {
     avatar.title = account;
     avatar.hidden = false;
     onSignOut = () => void signOut(db);
+    new PasswordDialog(db).mount();
   }
 
   const inventory = new InventoryView(store, incidents, options);
