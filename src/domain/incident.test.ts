@@ -10,7 +10,13 @@ import {
   topProblemEquipment,
 } from './incident';
 
-const mk = (equipmentId: string, day: string, reason: string, resolved = false, id: string = crypto.randomUUID()) => {
+const mk = (
+  equipmentId: string,
+  day: string,
+  reason: string,
+  resolved = false,
+  id: string = crypto.randomUUID(),
+) => {
   const r = readIncident({ day, reason, solution: '', resolved });
   if ('error' in r) throw new Error(r.error);
   return createIncident(equipmentId, r.draft, Date.parse(day), id);

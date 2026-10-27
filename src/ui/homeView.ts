@@ -1,8 +1,8 @@
 import type { BreakdownStore } from '../data/breakdownStore';
-import type { SellerStore } from '../data/sellerStore';
+import type { RequestStore } from '../data/requestStore';
 import type { Store } from '../data/store';
 import { EMPTY_BREAKDOWN_FILTERS, filterBreakdowns, type Breakdown } from '../domain/breakdown';
-import { countByStatus, type SellerRequest } from '../domain/seller';
+import { countByRequestStatus, mineOf, type AccessRequest } from '../domain/request';
 import { warrantyAlert } from '../domain/warranty';
 import type { ModuleId } from '../modules';
 import type { Equipment } from '../types';
@@ -16,7 +16,8 @@ interface HomeOptions {
   admin: boolean;
   store: Store | null;
   breakdowns: BreakdownStore | null;
-  sellers: SellerStore | null;
+  requests: RequestStore | null;
+  account: string;
   go: (section: HomeGo) => void;
 }
 
@@ -26,7 +27,7 @@ const plural = (n: number, one: string, many: string): string => `${n} ${n === 1
 export class HomeView {
   private equipment: Equipment[] = [];
   private breaks: Breakdown[] = [];
-  private sellerItems: SellerRequest[] = [];
+  private requestItems: AccessRequest[] = [];
   private ready = { inv: false, brk: false, sel: false };
 
   constructor(
@@ -37,7 +38,7 @@ export class HomeView {
   mount(): void {
     this.root.addEventListener('click', (e) => {
       const id = (e.target as Element).closest<HTMLElement>('[data-go]')?.dataset.go;
-      if (id === 'inventario' || id === 'quebras' || id === 'vendedores' || id === 'acessos')
+      if (id === 'inventario' || id === 'quebras' || id === 'solicitacoes' || id === 'acessos')
         this.opts.go(id);
     });
     const noop = (): void => undefined;
@@ -55,9 +56,9 @@ export class HomeView {
         this.render();
       }, noop);
     } else this.ready.brk = true;
-    if (this.opts.sellers) {
-      this.opts.sellers.subscribe((items) => {
-        this.sellerItems = items;
+    if (this.opts.requests) {
+      this.opts.requests.subscribe((items) => {
+        this.requestItems = items;
         this.ready.sel = true;
         this.render();
       }, noop);
@@ -90,9 +91,16 @@ export class HomeView {
     if (has('quebras')) {
       kpis.push(kpi('Quebras hoje', this.ready.brk ? String(todayCount) : '…', todayCount > 0));
     }
-    if (has('vendedores')) {
-      const pending = countByStatus(this.sellerItems).pendente;
-      kpis.push(kpi('Pedidos de vendedor', this.ready.sel ? String(pending) : '…', pending > 0));
+    const reqs = this.opts.admin ? this.requestItems : mineOf(this.requestItems, this.opts.account);
+    if (has('solicitacoes')) {
+      const pending = countByRequestStatus(reqs).pendente;
+      kpis.push(
+        kpi(
+          this.opts.admin ? 'Acessos a criar' : 'Pedidos pendentes',
+          this.ready.sel ? String(pending) : '…',
+          this.opts.admin && pending > 0,
+        ),
+      );
     }
     if (has('inventario')) {
       kpis.push(kpi('Equipamentos', this.ready.inv ? String(this.equipment.length) : '…', false));
@@ -126,17 +134,17 @@ export class HomeView {
         ),
       );
     }
-    if (has('vendedores')) {
-      const n = countByStatus(this.sellerItems);
+    if (has('solicitacoes')) {
+      const n = countByRequestStatus(reqs);
       tiles.push(
         tile(
-          'vendedores',
-          'Cadastro de vendedores',
+          'solicitacoes',
+          'Solicitação de acessos',
           !this.ready.sel
             ? 'Carregando…'
-            : this.sellerItems.length === 0
+            : reqs.length === 0
               ? 'Nenhum pedido ainda'
-              : `${plural(n.pendente, 'pedido pendente', 'pedidos pendentes')}`,
+              : plural(n.pendente, 'pedido pendente', 'pedidos pendentes'),
         ),
       );
     }

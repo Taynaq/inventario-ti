@@ -4,7 +4,7 @@ import { CloudBreakdownStore, LocalBreakdownStore, type BreakdownStore } from '.
 import { CloudStore } from './data/cloudStore';
 import { CloudIncidentStore, LocalIncidentStore, type IncidentStore } from './data/incidentStore';
 import { LocalStore } from './data/localStore';
-import { CloudSellerStore, LocalSellerStore, type SellerStore } from './data/sellerStore';
+import { CloudRequestStore, LocalRequestStore, type RequestStore } from './data/requestStore';
 import type { Store } from './data/store';
 import { createSupabase } from './data/supabaseClient';
 import { MODULE_IDS, type ModuleId } from './modules';
@@ -13,7 +13,7 @@ import { $ } from './ui/dom';
 import { requireMember, signOut } from './ui/auth';
 import { HomeView } from './ui/homeView';
 import { InventoryView } from './ui/inventoryView';
-import { SellerView } from './ui/sellerView';
+import { RequestView } from './ui/requestView';
 import { Shell, type Screen } from './ui/shell';
 
 async function main(): Promise<void> {
@@ -25,7 +25,7 @@ async function main(): Promise<void> {
 
   let store: Store;
   let breakdowns: BreakdownStore;
-  let sellers: SellerStore;
+  let requests: RequestStore;
   let incidents: IncidentStore;
   let account = '';
   let modules: readonly ModuleId[] = MODULE_IDS;
@@ -37,13 +37,13 @@ async function main(): Promise<void> {
     // Sem as chaves do Supabase o app funciona sozinho, guardando tudo neste navegador.
     store = new LocalStore();
     breakdowns = new LocalBreakdownStore();
-    sellers = new LocalSellerStore();
+    requests = new LocalRequestStore();
     incidents = new LocalIncidentStore();
   } else {
     account = await requireMember(db);
     store = new CloudStore(db);
     breakdowns = new CloudBreakdownStore(db);
-    sellers = new CloudSellerStore(db);
+    requests = new CloudRequestStore(db);
     incidents = new CloudIncidentStore(db);
     const api = new AccessApi(db, account.toLowerCase());
     modules = await api.myModules();
@@ -58,18 +58,19 @@ async function main(): Promise<void> {
 
   const inventory = new InventoryView(store, incidents, options);
   const quebras = new BreakdownView(breakdowns, setSummary);
-  const vendedores = new SellerView(sellers, account, setSummary);
+  const solicitacoes = new RequestView(requests, account, access !== null || !db, setSummary);
   // Só monta (e assina no banco) as telas que a pessoa pode usar.
   if (modules.includes('inventario')) inventory.mount();
   if (modules.includes('quebras')) quebras.mount();
-  if (modules.includes('vendedores')) vendedores.mount();
-  const screens: Record<ModuleId, Screen> = { inventario: inventory, quebras, vendedores };
+  if (modules.includes('solicitacoes')) solicitacoes.mount();
+  const screens: Record<ModuleId, Screen> = { inventario: inventory, quebras, solicitacoes };
   const home = new HomeView($('#modHome'), {
     modules,
-    admin: access !== null,
+    admin: access !== null || !db,
+    account,
     store: modules.includes('inventario') ? store : null,
     breakdowns: modules.includes('quebras') ? breakdowns : null,
-    sellers: modules.includes('vendedores') ? sellers : null,
+    requests: modules.includes('solicitacoes') ? requests : null,
     go: (section) => shell?.show(section),
   });
   home.mount();

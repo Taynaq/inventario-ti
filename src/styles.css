@@ -1577,3 +1577,107 @@ h1 {
   font-size: 13px;
   overflow-wrap: anywhere;
 }
+
+/* fila da TI: tabela no computador, cartões no celular */
+.rq-head {
+  display: none;
+}
+.rq {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+.rq-row {
+  display: grid;
+  gap: 4px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 10px 12px;
+}
+.rq-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 2px 10px;
+  align-items: start;
+  background: none;
+  border: 0;
+  padding: 0;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.rq-who {
+  grid-column: 1;
+  display: grid;
+  min-width: 0;
+}
+.rq-who small,
+.rq-date small {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+}
+.rq-st {
+  grid-column: 2;
+  grid-row: 1;
+  justify-self: end;
+}
+.rq-store,
+.rq-sector,
+.rq-date {
+  grid-column: 1 / -1;
+  font-size: 13px;
+  color: var(--muted);
+}
+.rq-store::before,
+.rq-sector::before,
+.rq-date::before {
+  content: attr(data-l) ': ';
+  font-weight: 600;
+}
+.rq-done {
+  flex: none;
+  justify-self: end;
+  min-height: 38px;
+  padding: 0 16px;
+}
+@media (min-width: 900px) {
+  .app:has(#sViewQueue:not([hidden])) {
+    max-width: 1000px;
+  }
+  .rq-head,
+  .rq-main {
+    grid-template-columns: 2fr 1fr 1fr 1.4fr 1fr;
+  }
+  .rq-head {
+    display: grid;
+    gap: 10px;
+    padding: 0 92px 6px 12px;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--muted);
+  }
+  .rq-row {
+    grid-template-columns: minmax(0, 1fr) 80px;
+    align-items: center;
+  }
+  .rq-main {
+    align-items: center;
+  }
+  .rq-main > * {
+    grid-column: auto;
+    grid-row: auto;
+    justify-self: start;
+  }
+  .rq-store::before,
+  .rq-sector::before,
+  .rq-date::before {
+    content: none;
+  }
+}

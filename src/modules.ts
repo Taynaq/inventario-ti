@@ -5,7 +5,7 @@ export const APP_NAME = 'Central de Gestão';
 export const MODULES = [
   { id: 'inventario', label: 'Inventário de TI', short: 'Inventário' },
   { id: 'quebras', label: 'Quebra de máquinas', short: 'Quebras' },
-  { id: 'vendedores', label: 'Cadastro de vendedores', short: 'Vendedores' },
+  { id: 'solicitacoes', label: 'Solicitação de acessos', short: 'Solicitações' },
 ] as const;
 
 export type ModuleId = (typeof MODULES)[number]['id'];

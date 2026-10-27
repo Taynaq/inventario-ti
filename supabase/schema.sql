@@ -83,7 +83,7 @@ security definer
 set search_path = public
 as $$
   select coalesce(
-    (select case when is_admin then array['inventario','quebras','vendedores'] else modules end
+    (select case when is_admin then array['inventario','quebras','solicitacoes'] else modules end
        from public.allowed_emails
       where email = lower(coalesce(auth.jwt() ->> 'email', ''))),
     '{}'::text[]
@@ -252,31 +252,29 @@ begin
 end;
 $$;
 
--- ------------------------------------------- pedidos de cadastro de vendedores
--- Campos da tela PESFM009 (Manutenção de Vendedor) do TOTVS Moda.
-create table if not exists public.vendedores (
+-- ------------------------------------------- solicitação de acessos
+-- Quem tem a tela pede o acesso (loja, setor, nome da pessoa). Só a administração (TI) vê todos os
+-- pedidos, muda a situação e escreve as observações. Quem pediu vê só os próprios pedidos.
+-- (A tabela antiga "vendedores", de uma versão de teste, não é mais usada e pode ser apagada.)
+create table if not exists public.solicitacoes (
   id           uuid primary key default gen_random_uuid(),
-  name         text not null check (char_length(btrim(name)) > 0),
-  seller_code  text not null default '',
-  person_code  text not null default '',
-  company      text not null default '',
-  aux_code     text not null default '',
-  seller_type  text not null default '',
-  inactive     boolean not null default false,
-  comm_table   text not null default '',
-  comm_start   date,
-  comm_end     date,
-  status       text not null default 'pendente' check (status in ('pendente', 'criado', 'cancelado')),
+  store        text not null default '',
+  sector       text not null default '',
+  person_name  text not null check (char_length(btrim(person_name)) > 0),
+  access       text not null default '',
   notes        text not null default '',
+  status       text not null default 'pendente' check (status in ('pendente', 'feito', 'cancelado')),
+  ti_notes     text not null default '',
   requested_by text not null default '',
+  done_at      timestamptz,
   created_at   timestamptz not null default now(),
   updated_at   timestamptz not null default now(),
   updated_by   uuid references auth.users (id) on delete set null
 );
 
-create index if not exists vendedores_status_idx on public.vendedores (status, created_at desc);
+create index if not exists solicitacoes_status_idx on public.solicitacoes (status, created_at);
 
-create or replace function public.vendedores_touch()
+create or replace function public.solicitacoes_touch()
 returns trigger
 language plpgsql
 as $$
@@ -287,37 +285,47 @@ begin
 end;
 $$;
 
-drop trigger if exists vendedores_touch on public.vendedores;
-create trigger vendedores_touch
-  before insert or update on public.vendedores
-  for each row execute function public.vendedores_touch();
+drop trigger if exists solicitacoes_touch on public.solicitacoes;
+create trigger solicitacoes_touch
+  before insert or update on public.solicitacoes
+  for each row execute function public.solicitacoes_touch();
 
-alter table public.vendedores enable row level security;
+alter table public.solicitacoes enable row level security;
 
-drop policy if exists "vendedores leem" on public.vendedores;
-create policy "vendedores leem" on public.vendedores
-  for select to authenticated using (public.has_module('vendedores'));
+drop policy if exists "solicitacoes leem" on public.solicitacoes;
+create policy "solicitacoes leem" on public.solicitacoes
+  for select to authenticated
+  using (
+    public.is_admin()
+    or (public.has_module('solicitacoes')
+        and requested_by = lower(coalesce(auth.jwt() ->> 'email', '')))
+  );
 
-drop policy if exists "vendedores criam" on public.vendedores;
-create policy "vendedores criam" on public.vendedores
-  for insert to authenticated with check (public.has_module('vendedores'));
+drop policy if exists "solicitacoes criam" on public.solicitacoes;
+create policy "solicitacoes criam" on public.solicitacoes
+  for insert to authenticated
+  with check (
+    public.has_module('solicitacoes')
+    and requested_by = lower(coalesce(auth.jwt() ->> 'email', ''))
+    and status = 'pendente'
+  );
 
-drop policy if exists "vendedores alteram" on public.vendedores;
-create policy "vendedores alteram" on public.vendedores
+drop policy if exists "solicitacoes alteram" on public.solicitacoes;
+create policy "solicitacoes alteram" on public.solicitacoes
   for update to authenticated
-  using (public.has_module('vendedores')) with check (public.has_module('vendedores'));
+  using (public.is_admin()) with check (public.is_admin());
 
-drop policy if exists "vendedores excluem" on public.vendedores;
-create policy "vendedores excluem" on public.vendedores
-  for delete to authenticated using (public.has_module('vendedores'));
+drop policy if exists "solicitacoes excluem" on public.solicitacoes;
+create policy "solicitacoes excluem" on public.solicitacoes
+  for delete to authenticated using (public.is_admin());
 
 do $$
 begin
   if not exists (
     select 1 from pg_publication_tables
-    where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'vendedores'
+    where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'solicitacoes'
   ) then
-    alter publication supabase_realtime add table public.vendedores;
+    alter publication supabase_realtime add table public.solicitacoes;
   end if;
 end;
 $$;
